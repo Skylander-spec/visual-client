@@ -61,6 +61,24 @@ function istNeuer(kandidat: string, laufend: string): boolean {
   return false
 }
 
+/**
+ * Kurzes Protokoll neben dem Kanal. Auf Windows sieht man die Ausgaben des
+ * Hauptprozesses nirgends — ohne diese Datei scheitert die Abfrage stumm,
+ * und genau das hat schon einmal Stunden gekostet.
+ */
+function protokoll(text: string): void {
+  try {
+    fs.mkdirSync(RELEASE_DIR, { recursive: true })
+    const datei = path.join(RELEASE_DIR, 'updater.log')
+    // Nicht endlos wachsen lassen
+    if (fs.existsSync(datei) && fs.statSync(datei).size > 64_000) fs.rmSync(datei)
+    fs.appendFileSync(datei, `${new Date().toISOString()}  ${text}
+`)
+  } catch {
+    /* Protokoll ist Beiwerk */
+  }
+}
+
 async function holen(url: string, ms: number): Promise<Response> {
   const res = await fetch(url, {
     signal: AbortSignal.timeout(ms),
@@ -84,13 +102,21 @@ async function holen(url: string, ms: number): Promise<Response> {
  */
 async function vonGithub(): Promise<boolean> {
   const rel = (await (await holen(RELEASE_API, 10_000)).json()) as Release
-  if (rel.draft || rel.prerelease) return false
+  if (rel.draft || rel.prerelease) {
+    protokoll(`Release ${rel.tag_name} ist Entwurf/Vorab — uebersprungen`)
+    return false
+  }
   const version = (rel.tag_name ?? rel.name ?? '').replace(/^v/i, '')
-  if (!version || !istNeuer(version, app.getVersion())) return false
+  const laufend = app.getVersion()
+  protokoll(`Release ${version} gefunden, laufend ${laufend}`)
+  if (!version || !istNeuer(version, laufend)) return false
 
   const asar = rel.assets?.find((a) => a.name === 'app.asar')
   const meta = rel.assets?.find((a) => a.name === 'latest.json')
-  if (!asar || !meta) return false
+  if (!asar || !meta) {
+    protokoll('app.asar oder latest.json fehlt im Release')
+    return false
+  }
 
   const beschreibung = (await (await holen(meta.browser_download_url, 10_000)).json()) as {
     version?: string
@@ -104,10 +130,23 @@ async function vonGithub(): Promise<boolean> {
   fs.writeFileSync(teil, daten)
   const geprueft = crypto.createHash('sha256').update(daten).digest('hex')
   if (geprueft !== beschreibung.hash) {
+    protokoll('Pruefsumme stimmt nicht — Download verworfen')
     fs.rmSync(teil, { force: true })
     return false
   }
-  fs.renameSync(teil, RELEASE_ASAR)
+  // Unter Windows kann das Umbenennen ueber eine bestehende Datei mit EPERM
+  // scheitern — Virenscanner, ein offener Handle oder eine Dateisystem-
+  // Umleitung reichen dafuer. Deshalb erst weg mit der alten Datei, und wenn
+  // das Umbenennen trotzdem nicht geht, eben kopieren.
+  ohneAsar(() => {
+    try {
+      fs.rmSync(RELEASE_ASAR, { force: true })
+      fs.renameSync(teil, RELEASE_ASAR)
+    } catch {
+      fs.copyFileSync(teil, RELEASE_ASAR)
+      fs.rmSync(teil, { force: true })
+    }
+  })
   fs.writeFileSync(
     RELEASE_JSON,
     JSON.stringify({ version, hash: geprueft, source: REPO }, null, 2)
@@ -120,17 +159,39 @@ async function vonGithub(): Promise<boolean> {
  * kaputten Download bleibt es schlicht bei der laufenden Fassung.
  */
 export async function checkGithub(): Promise<{ available: boolean; version?: string }> {
+  protokoll(`Suche nach Updates … (isPackaged=${app.isPackaged}, Version ${app.getVersion()})`)
   if (!app.isPackaged) return { available: false }
   try {
-    if (await vonGithub()) return checkForUpdate()
-  } catch {
-    /* kein Netz, kein Release, kein Update */
+    if (await vonGithub()) {
+      protokoll('Neue Fassung in den Kanal gelegt')
+      return checkForUpdate()
+    }
+  } catch (err) {
+    protokoll(`Abfrage fehlgeschlagen: ${err instanceof Error ? err.message : String(err)}`)
   }
   return { available: !!pendingVersion, version: pendingVersion ?? undefined }
 }
 
+/**
+ * Electron behandelt jede .asar als VERZEICHNIS, sobald fs darauf zugreift —
+ * readFileSync wirft ENOENT, statSync meldet isDirectory(). Genau daran ist
+ * die Update-Pruefung lautlos gescheitert: das Hashen der installierten
+ * app.asar warf, der catch schluckte es, und es gab nie ein Update.
+ *
+ * process.noAsar schaltet diesen Abfang fuer die Dauer des Aufrufs ab.
+ */
+function ohneAsar<T>(tun: () => T): T {
+  const vorher = process.noAsar
+  process.noAsar = true
+  try {
+    return tun()
+  } finally {
+    process.noAsar = vorher
+  }
+}
+
 function sha256(file: string): string {
-  return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')
+  return ohneAsar(() => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'))
 }
 
 /**
@@ -141,19 +202,29 @@ function sha256(file: string): string {
 export function checkForUpdate(): { available: boolean; version?: string } {
   if (!app.isPackaged) return { available: false }
   try {
-    if (!fs.existsSync(RELEASE_ASAR)) return { available: false }
+    if (!ohneAsar(() => fs.existsSync(RELEASE_ASAR))) return { available: false }
     const latest = JSON.parse(fs.readFileSync(RELEASE_JSON, 'utf8')) as {
       version?: string
       hash?: string
+    }
+    // Erst die Versionsnummer — sie ist das ehrliche Kriterium fuer
+    // "es gibt etwas Neueres". Der Hash sagt nur, dass die Dateien sich
+    // unterscheiden, und faengt zusaetzlich den Fall ab, dass der Kanal von
+    // Hand mit derselben Nummer gefuellt wurde (Entwicklung).
+    if (latest.version && istNeuer(latest.version, app.getVersion())) {
+      pendingVersion = latest.version
+      protokoll(`Kanal hat ${latest.version}, installiert ist ${app.getVersion()}`)
+      return { available: true, version: pendingVersion }
     }
     const channelHash = latest.hash ?? sha256(RELEASE_ASAR)
     const installedHash = sha256(app.getAppPath())
     if (channelHash !== installedHash) {
       pendingVersion = latest.version ?? 'neu'
+      protokoll(`Kanal weicht ab (${channelHash.slice(0, 8)} statt ${installedHash.slice(0, 8)})`)
       return { available: true, version: pendingVersion }
     }
-  } catch {
-    /* kein Release / kein Update */
+  } catch (err) {
+    protokoll(`Kanal nicht lesbar: ${err instanceof Error ? err.message : String(err)}`)
   }
   return { available: false }
 }
@@ -169,6 +240,7 @@ export function updateState(): { available: boolean; version: string | null; cur
  * die Swap-per-Batch-Lösung.
  */
 export function applyUpdate(relaunch: boolean): void {
+  protokoll(`Einspielen angefordert (ausstehend=${pendingVersion}, laeuft=${applying})`)
   if (!pendingVersion || applying || !app.isPackaged) return
   applying = true
   const installedAsar = app.getAppPath() // …/resources/app.asar
@@ -176,16 +248,34 @@ export function applyUpdate(relaunch: boolean): void {
 
   if (process.platform === 'win32') {
     const cmdFile = path.join(app.getPath('temp'), 'visual-client-update.cmd')
+    // Frueher wartete das Skript per tasklist darauf, dass "Visual Client.exe"
+    // aus der Prozessliste verschwindet. Diese Pruefung blieb haengen und das
+    // Update wurde nie eingespielt. Jetzt wird schlicht kopiert, bis es
+    // klappt: solange die App laeuft, ist die app.asar gesperrt und copy
+    // scheitert — danach gelingt es beim naechsten Versuch. Kein Abgleich
+    // von Prozessnamen, keine Abhaengigkeit von der Sprache des Systems.
     const lines = [
       '@echo off',
-      ':wait',
-      'tasklist /FI "IMAGENAME eq Visual Client.exe" 2>nul | find /I "Visual Client.exe" >nul && (ping -n 2 127.0.0.1 >nul & goto wait)',
-      `copy /Y "${RELEASE_ASAR}" "${installedAsar}" >nul`,
+      'for /L %%i in (1,1,90) do (',
+      `  copy /Y "${RELEASE_ASAR}" "${installedAsar}" >nul 2>&1 && goto fertig`,
+      '  ping -n 2 127.0.0.1 >nul',
+      ')',
+      ':fertig',
       relaunch ? `start "" "${exe}"` : '',
       'del "%~f0"'
     ].filter(Boolean)
     fs.writeFileSync(cmdFile, lines.join('\r\n'))
-    spawn('cmd.exe', ['/c', cmdFile], { detached: true, stdio: 'ignore', windowsHide: true }).unref()
+    protokoll(`Skript geschrieben: ${cmdFile}`)
+    try {
+      spawn('cmd.exe', ['/c', cmdFile], {
+        detached: true,
+        stdio: 'ignore',
+        windowsHide: true
+      }).unref()
+      protokoll('Skript gestartet — Kopie erfolgt nach dem Beenden')
+    } catch (err) {
+      protokoll(`Skript liess sich nicht starten: ${err instanceof Error ? err.message : err}`)
+    }
     return
   }
 

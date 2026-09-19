@@ -23,6 +23,7 @@ export function installVisuals(profileId: string): { pack: boolean; mod: boolean
   if (fs.existsSync(path.join(packDir, 'pack.mcmeta'))) {
     const zip = new AdmZip()
     zip.addLocalFolder(packDir)
+    fs.mkdirSync(path.join(dir, 'resourcepacks'), { recursive: true })
     zip.writeZip(path.join(dir, 'resourcepacks', 'VisualPack.zip'))
     activateResourcePack(dir, 'file/VisualPack.zip')
     result.pack = true
@@ -35,6 +36,7 @@ export function installVisuals(profileId: string): { pack: boolean; mod: boolean
     if (fs.existsSync(libsDir)) {
       const jar = fs.readdirSync(libsDir).find((f) => f.endsWith('.jar'))
       if (jar) {
+        fs.mkdirSync(path.join(dir, 'mods'), { recursive: true })
         fs.copyFileSync(path.join(libsDir, jar), path.join(dir, 'mods', jar))
         result.mod = true
       }
@@ -126,9 +128,16 @@ export function installBranding(profileId: string, loader: string, mcVersion?: s
   for (const [src, name] of jars) {
     if (!src) continue
     try {
+      // Bei einem frischen Profil gibt es den mods-Ordner beim ersten Start
+      // noch nicht — Fabric legt ihn erst spaeter selbst an. Ohne dieses
+      // mkdir schlug das Kopieren genau einmal fehl, und zwar lautlos: der
+      // Spieler sah beim ersten Start das Vanilla-Menue ohne jede Meldung.
+      fs.mkdirSync(path.join(dir, 'mods'), { recursive: true })
       fs.copyFileSync(src, path.join(dir, 'mods', name))
-    } catch {
-      /* unkritisch */
+    } catch (err) {
+      // Nicht mehr stillschweigend: ohne diese Zeile ist nicht zu sehen,
+      // dass der Client-Mod fehlt.
+      console.error('[visuals] Konnte', name, 'nicht ins Profil kopieren:', err)
     }
   }
 }
