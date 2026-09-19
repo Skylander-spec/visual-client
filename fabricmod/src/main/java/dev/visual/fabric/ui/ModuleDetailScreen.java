@@ -107,7 +107,7 @@ public class ModuleDetailScreen extends VMouseScreen {
                     st.next.run();
                     return true;
                 }
-                if (mouseX >= x + w - 110 && mouseX <= x + w - 88) {
+                if (mouseX >= x + w - 150 && mouseX <= x + w - 128) {
                     st.prev.run();
                     return true;
                 }
@@ -178,11 +178,14 @@ public class ModuleDetailScreen extends VMouseScreen {
             VStyle.roundRect(ctx, bx, y + 4, 36, 18, 9, on ? VStyle.ACCENT : 0x33FFFFFF);
             VStyle.roundRect(ctx, on ? bx + 19 : bx + 2, y + 6, 14, 14, 7, 0xFFFFFFFF);
         } else if (s instanceof VSetting.Stepper st) {
-            String value = st.display.get();
-            button(ctx, x + w - 110, y + 4, "−");
+            // Zwischen den beiden Knöpfen muss auch ein langer Wert wie
+            // „Linke Schulter" Platz haben — vorher lagen 58 Pixel dazwischen,
+            // und der Text schob sich über das Minus.
+            String value = textRenderer.trimToWidth(st.display.get(), 92);
+            button(ctx, x + w - 150, y + 4, "−");
             button(ctx, x + w - 30, y + 4, "+");
             int vw = textRenderer.getWidth(value);
-            ctx.drawText(textRenderer, value, x + w - 69 - vw / 2, y + 6, VStyle.TEXT, false);
+            ctx.drawText(textRenderer, value, x + w - 89 - vw / 2, y + 6, VStyle.TEXT, false);
         } else if (s instanceof VSetting.Info info) {
             String value = info.value.get();
             VStyle.roundRect(ctx, x + w - 90, y + 4, 82, 18, VStyle.R_CARD, 0x14FFFFFF);

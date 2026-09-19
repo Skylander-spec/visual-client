@@ -6,12 +6,41 @@ versionsspezifischen Mod-Empfehlungen, Microsoft- **und** Offline-Login — plus
 HUD/Effekte/Cosmetics und ein passendes Resource Pack. Das Spielfenster heißt „Visual Client".
 
 ```
-visual/
+visual client/
 ├── launcher/       Electron + React + TypeScript Desktop-App (der eigentliche Client)
-├── mod/            Forge-Mod "VisualsMod" (Java 17, Forge 1.20.1)
+├── fabricmod/      Fabric-Mod für 1.21.2 – 1.21.11 (HUD, Cosmetics, eigene Menüs)
+├── fabricmod189/   eigener Fabric-Mod für 1.8.9 (Legacy Fabric, Java 8)
+├── brandingmod/    setzt den Fenstertitel auf „Visual Client"
+├── mod/            älterer Forge-Mod (1.20.1), nicht mehr im Installer
 ├── resourcepack/   "Visual Pack" — Texturen, GUI, Sounds (+ Generator-Pipeline)
 └── docs/           Offene Punkte, Referenzen
 ```
+
+## Updates veröffentlichen
+
+Der Launcher fragt beim Start das neueste Release dieses Repos ab. Ist dessen
+Version höher als die laufende, lädt er die neue `app.asar` herunter, prüft sie
+gegen den in `latest.json` veröffentlichten SHA-256 und spielt sie beim
+Schließen ein.
+
+```
+# einmalig
+winget install --id GitHub.cli -e
+gh auth login
+
+# je Update
+# 1. "version" in launcher/package.json erhöhen
+# 2.
+cd launcher && npm run publish
+```
+
+`npm run publish` baut den Launcher samt Installer, schreibt `latest.json` und
+hängt `app.asar`, `latest.json` und den Installer an ein Release `v<version>`.
+
+**Was ein Update nicht anfasst:** ersetzt wird ausschließlich die `app.asar` in
+der Installation. Profile, Konten, Welten, selbst installierte Mods, Skins,
+Capes und Ressourcenpakete liegen unter `%APPDATA%/.visualclient` und bleiben
+unverändert.
 
 ## Voraussetzungen
 

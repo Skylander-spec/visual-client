@@ -250,7 +250,8 @@ public class ModBrowserScreen extends Screen {
             int by = y + i * 25 + 3;
             var bild = ProjektBild.textur(e.projectId());
             if (bild != null) {
-                Compat.drawTex(context, bild, bx, by, 16, 16, 16, 16, 0xFFFFFFFF);
+                Compat.drawTex(context, bild.id(), bx, by, 16, 16,
+                        bild.breite(), bild.hoehe(), 0xFFFFFFFF);
             } else {
                 VStyle.roundRect(context, bx, by, 16, 16, VStyle.R_XS, farbeAus(e.title()));
                 String b = e.title().isEmpty() ? "?" : e.title().substring(0, 1).toUpperCase();

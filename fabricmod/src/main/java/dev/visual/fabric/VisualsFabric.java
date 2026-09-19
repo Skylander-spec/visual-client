@@ -42,10 +42,18 @@ public class VisualsFabric implements ClientModInitializer {
         // kein weiterer Mixin nötig ist.
         ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
             if (!(screen instanceof GameMenuScreen)) return;
-            Screens.getButtons(screen).add(ButtonWidget
+            var knoepfe = Screens.getButtons(screen);
+            // Unter allem einsortieren, was schon da ist. Eine feste Höhe lag
+            // genau auf „Speichern und Titelbildschirm" — und wer andere Mods
+            // im Pause-Menü hat, bekommt dort noch mehr Reihen.
+            int unten = knoepfe.stream()
+                    .mapToInt(k -> k.getY() + k.getHeight())
+                    .max().orElse(h / 4 + 120);
+            int y = Math.min(unten + 6, h - 28);
+            knoepfe.add(ButtonWidget
                     .builder(Text.literal("✦ Visual Client"), b ->
                             client.setScreen(new dev.visual.fabric.ui.VisualHomeScreen()))
-                    .dimensions(w / 2 - 102, h / 4 + 128 - 16, 204, 20)
+                    .dimensions(w / 2 - 102, y, 204, 20)
                     .build());
         });
 

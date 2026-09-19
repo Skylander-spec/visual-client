@@ -22,6 +22,8 @@ import net.minecraft.util.math.RotationAxis;
 public final class MiniMe {
     /** Höhe des Spielermodells in Blöcken — Bezug für alle Sitzplätze. */
     private static final float GROESSE = 1.8f;
+    /** Seitlicher Versatz für die Schulterplätze, in Blöcken. */
+    private static final float SEITE = 0.42f;
 
     private static boolean zeichnet = false;
     private static Object eigenerZustand = null;
@@ -68,12 +70,13 @@ public final class MiniMe {
 
         matrizen.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-koerperDrehung));
         switch (c.miniMePos) {
-            // Auf dem Kopf: mittig, direkt über dem Scheitel
-            case 0 -> matrizen.translate(0.0f, GROESSE, 0.0f);
-            // Linke Schulter: knapp unter Halshöhe, um die halbe Schulterbreite versetzt
-            case 1 -> matrizen.translate(0.26f, GROESSE - 0.45f, 0.0f);
-            // Rechte Schulter
-            default -> matrizen.translate(-0.26f, GROESSE - 0.45f, 0.0f);
+            // Auf dem Kopf: Füße auf dem Scheitel (Kopf endet bei 1,85)
+            case 0 -> matrizen.translate(0.0f, 1.84f, 0.0f);
+            // Auf der Schulter: Füße auf der Oberkante des Arms (1,35) und so
+            // weit nach außen, dass der Kleine den Kopf nicht schneidet — der
+            // Kopf ist 0,25 breit, der Kleine bei 35 % rund 0,18.
+            case 1 -> matrizen.translate(SEITE, 1.35f, 0.0f);
+            default -> matrizen.translate(-SEITE, 1.35f, 0.0f);
         }
         matrizen.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(koerperDrehung));
         matrizen.scale(faktor, faktor, faktor);

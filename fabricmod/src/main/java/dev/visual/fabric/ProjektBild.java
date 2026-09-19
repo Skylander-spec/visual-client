@@ -25,17 +25,21 @@ import java.util.concurrent.ConcurrentHashMap;
  * liest nur PNG, alles andere wird gar nicht erst geholt.
  */
 public final class ProjektBild {
+    /** Textur samt ihrer echten Maße — drawTexture braucht beide. */
+    public record Bild(Identifier id, int breite, int hoehe) {
+    }
+
     private static final HttpClient HTTP = HttpClient.newHttpClient();
-    /** Projekt-Kennung -> Textur. Fehlt der Eintrag, läuft der Versuch noch. */
-    private static final Map<String, Identifier> FERTIG = new ConcurrentHashMap<>();
+    /** Projekt-Kennung -> Bild. Fehlt der Eintrag, läuft der Versuch noch. */
+    private static final Map<String, Bild> FERTIG = new ConcurrentHashMap<>();
     /** Projekte, für die schon ein Versuch läuft oder gescheitert ist. */
     private static final Map<String, Boolean> VERSUCHT = new ConcurrentHashMap<>();
 
     private ProjektBild() {
     }
 
-    /** Textur eines Projekts oder {@code null}, wenn (noch) keine da ist. */
-    public static Identifier textur(String projektId) {
+    /** Bild eines Projekts oder {@code null}, wenn (noch) keins da ist. */
+    public static Bild textur(String projektId) {
         return FERTIG.get(projektId);
     }
 
@@ -59,10 +63,15 @@ public final class ProjektBild {
                 mc.execute(() -> {
                     try {
                         NativeImage bild = NativeImage.read(daten);
+                        // Kennungen duerfen nur Kleinbuchstaben enthalten,
+                        // Modrinth-IDs unterscheiden aber Gross und Klein.
+                        // Der angehaengte Hash haelt zwei Projekte auseinander,
+                        // die sich nur darin unterscheiden.
                         Identifier id = Identifier.of("visualsfabric",
-                                "projekt/" + projektId.toLowerCase());
+                                "projekt/" + projektId.toLowerCase()
+                                        + "_" + Integer.toHexString(projektId.hashCode()));
                         Compat.registerTexture(mc, id, bild);
-                        FERTIG.put(projektId, id);
+                        FERTIG.put(projektId, new Bild(id, bild.getWidth(), bild.getHeight()));
                     } catch (Throwable t) {
                         // Kein lesbares PNG — es bleibt bei der Ersatzkachel
                     }
