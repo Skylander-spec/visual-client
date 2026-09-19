@@ -122,6 +122,16 @@ export function installMockApi(): void {
       toggleFile: async () => true
     },
     visuals: { install: async () => ({ pack: false, mod: false }) },
+    pack: {
+      install: async () => ({
+        gesamt: 0,
+        fertig: 0,
+        installiert: 0,
+        uebersprungen: 0,
+        aktuell: ''
+      }),
+      onStatus: () => () => {}
+    },
     performance: {
       apply: async () => ({ jvm: true, options: 14, modsInstalled: [], heavyDisabled: [] })
     },

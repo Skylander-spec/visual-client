@@ -49,6 +49,14 @@ const api = {
   visuals: {
     install: (profileId: string) => ipcRenderer.invoke('visuals:install', profileId)
   },
+  pack: {
+    install: (profileId: string) => ipcRenderer.invoke('pack:install', profileId),
+    onStatus: (cb: (s: unknown) => void) => {
+      const h = (_e: unknown, s: unknown): void => cb(s)
+      ipcRenderer.on('pack:status', h)
+      return () => ipcRenderer.removeListener('pack:status', h)
+    }
+  },
   performance: {
     apply: (profileId: string) => ipcRenderer.invoke('perf:apply', profileId)
   },

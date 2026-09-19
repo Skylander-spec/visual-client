@@ -7,6 +7,7 @@ import * as auth from './auth'
 import * as launch from './launch'
 import * as cosmetics from './cosmetics'
 import { installVisuals } from './visuals'
+import { installPaket } from './paket'
 import { applyPerformance } from './performance'
 import { getSettings, saveSettings } from './settings'
 import { checkForUpdate, checkGithub, updateState, applyUpdate, hasPending } from './updater'
@@ -248,6 +249,7 @@ function registerIpc(): void {
   // Visuals + Performance + Start
   ipcMain.handle('visuals:install', (_e, profileId: string) => installVisuals(profileId))
   ipcMain.handle('perf:apply', (_e, profileId: string) => applyPerformance(profileId))
+  ipcMain.handle('pack:install', (_e, profileId: string) => installPaket(win, profileId))
   ipcMain.handle('launch:start', (_e, profileId: string, lang?: string) =>
     launchProfileSafe(profileId, lang)
   )

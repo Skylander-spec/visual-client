@@ -11,6 +11,11 @@ export const LANGS: { id: Lang; label: string; flag: string }[] = [
 type Dict = Record<string, string>
 
 const de: Dict = {
+  'home.pack': 'Grosses Mod-Paket',
+  'home.packDesc': 'Ueber 140 Mods wie in OneClient, dazu Essential — mit einem Klick ins Profil.',
+  'home.packBusy': 'Mods werden installiert …',
+  'home.packAdded': 'installiert',
+  'home.packSkipped': 'uebersprungen',
   'skins.pickFile': 'Skin-PNG (64x64) auswählen',
   'capes.pickFile': 'Cape-PNG (64x32) auswählen',
   'capes.animated': 'Bewegt speichern',
@@ -267,6 +272,11 @@ const de: Dict = {
 }
 
 const en: Dict = {
+  'home.pack': 'Big mod pack',
+  'home.packDesc': 'Over 140 mods like OneClient ships, plus Essential — one click into your profile.',
+  'home.packBusy': 'Installing mods …',
+  'home.packAdded': 'installed',
+  'home.packSkipped': 'skipped',
   'skins.pickFile': 'Choose a skin PNG (64x64)',
   'capes.pickFile': 'Choose a cape PNG (64x32)',
   'capes.animated': 'Save animated',
@@ -523,6 +533,11 @@ const en: Dict = {
 }
 
 const ru: Dict = {
+  'home.pack': 'Большой набор модов',
+  'home.packDesc': 'Больше 140 модов, как в OneClient, плюс Essential — в один клик.',
+  'home.packBusy': 'Устанавливаю моды …',
+  'home.packAdded': 'установлено',
+  'home.packSkipped': 'пропущено',
   'skins.pickFile': 'Выберите PNG скина (64x64)',
   'capes.pickFile': 'Выберите PNG плаща (64x32)',
   'capes.animated': 'Сохранить анимированный',

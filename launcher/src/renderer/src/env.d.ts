@@ -115,6 +115,24 @@ declare global {
         toggleFile(profileId: string, kind: string, fileName: string): Promise<boolean>
       }
       visuals: { install(profileId: string): Promise<{ pack: boolean; mod: boolean }> }
+      pack: {
+        install(profileId: string): Promise<{
+          gesamt: number
+          fertig: number
+          installiert: number
+          uebersprungen: number
+          aktuell: string
+        }>
+        onStatus(
+          cb: (s: {
+            gesamt: number
+            fertig: number
+            installiert: number
+            uebersprungen: number
+            aktuell: string
+          }) => void
+        ): () => void
+      }
       performance: {
         apply(profileId: string): Promise<{
           jvm: boolean
