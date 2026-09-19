@@ -30,11 +30,32 @@ public final class CapeManager {
     private static long lastModified = -1;
     private static long lastCheck = 0;
 
+    /**
+     * Vorschau: der Cosmetics-Bildschirm zeichnet denselben Spieler mehrfach,
+     * jedes Mal mit einem anderen Umhang. Solange eine Vorschau gesetzt ist,
+     * liefert {@link #get} diese statt des angelegten Capes. Gesetzt und
+     * gelöscht wird das im selben Zeichendurchlauf, also nie über ein Bild
+     * hinaus sichtbar.
+     */
+    private static Identifier vorschau = null;
+    private static boolean vorschauAktiv = false;
+
+    public static void vorschauSetzen(Identifier cape) {
+        vorschau = cape;
+        vorschauAktiv = true;
+    }
+
+    public static void vorschauLoeschen() {
+        vorschau = null;
+        vorschauAktiv = false;
+    }
+
     private CapeManager() {
     }
 
     /** Aktuelles Cape oder null. Prüft höchstens jede Sekunde auf Änderungen. */
     public static Identifier get(MinecraftClient client) {
+        if (vorschauAktiv) return vorschau;
         long now = System.currentTimeMillis();
         if (now - lastCheck > 1000) {
             lastCheck = now;
@@ -102,6 +123,56 @@ public final class CapeManager {
         }
         voll.close();
         bilder = neu;
+    }
+
+    /** Ordner des Launchers, oder null, wenn er nicht zu finden ist. */
+    public static Path datenOrdner() {
+        String appData = System.getenv("APPDATA");
+        if (appData != null) {
+            Path p = Paths.get(appData, ".visualclient");
+            if (Files.isDirectory(p)) return p;
+        }
+        Path relativ = Paths.get("..", "..");
+        return Files.isDirectory(relativ.resolve("capes")) ? relativ : null;
+    }
+
+    /** Name des angelegten Capes, wie der Launcher ihn vermerkt. */
+    public static String angelegt() {
+        Path d = datenOrdner();
+        if (d == null) return null;
+        try {
+            Path marker = d.resolve("cosmetics").resolve("cape.name");
+            return Files.isRegularFile(marker) ? Files.readString(marker).trim() : null;
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    /**
+     * Ein Cape anlegen — genau wie der Launcher: die Datei nach
+     * cosmetics/cape.png kopieren und den Namen daneben vermerken. Dadurch
+     * zeigen Launcher und Spiel immer dasselbe an.
+     */
+    public static void anlegen(String name) {
+        Path d = datenOrdner();
+        if (d == null) return;
+        try {
+            Path ziel = d.resolve("cosmetics").resolve("cape.png");
+            Path marker = d.resolve("cosmetics").resolve("cape.name");
+            Files.createDirectories(ziel.getParent());
+            if (name == null) {
+                Files.deleteIfExists(ziel);
+                Files.deleteIfExists(marker);
+            } else {
+                Files.copy(d.resolve("capes").resolve(name + ".png"), ziel,
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                Files.writeString(marker, name);
+            }
+            lastModified = -1;  // beim naechsten get neu einlesen
+            lastCheck = 0;
+        } catch (Throwable t) {
+            // Schlaegt das Kopieren fehl, bleibt das bisherige Cape angelegt
+        }
     }
 
     /**

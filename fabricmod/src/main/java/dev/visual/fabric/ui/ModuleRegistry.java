@@ -247,6 +247,12 @@ public final class ModuleRegistry {
                 .onOpen(() -> MinecraftClient.getInstance()
                         .setScreen(new ModBrowserScreen(parent, "mod"))));
 
+        list.add(new VModule("cosmetics", "✦", VText.t("mod.cosmetics"),
+                VText.t("mod.cosmetics.d"),
+                null, null)
+                .onOpen(() -> MinecraftClient.getInstance()
+                        .setScreen(new VisualCosmeticsScreen())));
+
         list.add(new VModule("packs", "◫", VText.t("mod.packs"),
                 VText.t("mod.packs.d"),
                 null, null)
