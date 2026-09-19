@@ -784,3 +784,120 @@ input::placeholder {
   font-weight: 600;
   letter-spacing: -0.01em;
 }
+
+/* ── Mod-Liste ───────────────────────────────────────────────────────────
+ *
+ * Vorher war jede Zeile eine Reihe gleich lauter Knöpfe: ⏻ zum Schalten,
+ * ✕ in Rot zum Löschen, dazu die ganze Zeile auf 55 % Deckkraft, sobald
+ * ein Mod aus war. Das Ergebnis las sich wie eine Warnung.
+ *
+ * Jetzt trägt jede Zeile genau ein sprechendes Bedienelement — den
+ * Schalter. Das Löschen tritt zurück und meldet sich erst beim Überfahren,
+ * und „aus" dimmt nur noch den Text, damit der Schalter selbst klar
+ * ablesbar bleibt.
+ */
+.modrow {
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-lg);
+  transition: background 0.16s ease;
+}
+
+.modrow:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.modrow.aus .mod-title,
+.modrow.aus .muted,
+.modrow.aus .mod-icon {
+  opacity: 0.45;
+}
+
+/* Das Löschen ist selten und endgültig — es drängt sich nicht auf. */
+.modrow .iconbtn {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--text-faint);
+  border-color: transparent;
+  background: transparent;
+  opacity: 0;
+  transition: opacity 0.16s ease, color 0.16s ease, background 0.16s ease;
+}
+
+.modrow:hover .iconbtn,
+.modrow .iconbtn:focus-visible {
+  opacity: 1;
+}
+
+.modrow .iconbtn:hover {
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.12);
+}
+
+/* ── Schalter im Stil von iOS ────────────────────────────────────────────
+ * Träger ohne eigenes Aussehen: der Knopf ist nur die Trefferfläche,
+ * sichtbar ist allein die Pille darin.
+ */
+.switchbtn {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 4px;
+  margin: 0;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+.switchbtn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 999px;
+}
+
+.switch {
+  width: 40px;
+  height: 24px;
+  border-radius: 999px;
+  background: rgba(120, 120, 128, 0.32);
+  border: 0;
+  position: relative;
+  display: inline-block;
+  transition: background 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+  transition: left 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.switch.on {
+  background: #30d158; /* Apples Systemgrün für „an" */
+}
+
+.switch.on::after {
+  left: 18px;
+  background: #fff;
+}
+
+.switchbtn:active .switch::after {
+  width: 24px;
+}
+
+.switchbtn:active .switch.on::after {
+  left: 14px;
+}

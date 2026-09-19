@@ -5,6 +5,7 @@
   "client": [
     "InGameHudMixin",
     "PlayerEntityRendererMixin",
+    "LivingEntityRendererMixin",
     "CameraMixin",
     "HeldItemRendererMixin",
     "TitleScreenMixin"

@@ -45,7 +45,7 @@ public class ModBrowserScreen extends Screen {
     private int px;
     private int py;
 
-    private record Entry(String projectId, String title, String downloads) {
+    private record Entry(String projectId, String title, String downloads, String iconUrl) {
     }
 
     public ModBrowserScreen(Screen parent, String projectType) {
@@ -112,8 +112,11 @@ public class ModBrowserScreen extends Screen {
                     JsonObject h = hits.get(i).getAsJsonObject();
                     long dl = h.get("downloads").getAsLong();
                     String dls = dl >= 1_000_000 ? (dl / 1_000_000) + " M" : (dl / 1_000) + " k";
+                    // icon_url fehlt bei Projekten ohne Bild und ist dann JsonNull
+                    String bild = h.has("icon_url") && !h.get("icon_url").isJsonNull()
+                            ? h.get("icon_url").getAsString() : null;
                     parsed.add(new Entry(h.get("project_id").getAsString(),
-                            h.get("title").getAsString(), dls));
+                            h.get("title").getAsString(), dls, bild));
                 }
                 MinecraftClient.getInstance().execute(() -> {
                     results.clear();
@@ -203,6 +206,13 @@ public class ModBrowserScreen extends Screen {
         }
     }
 
+    /** Ruhige, aber je Name andere Farbe für die Ersatzkachel. */
+    private static int farbeAus(String name) {
+        int h = name.hashCode();
+        return 0xFF000000 | ((70 + Math.abs(h % 110)) << 16)
+                | ((70 + Math.abs((h >> 8) % 110)) << 8) | (110 + Math.abs((h >> 16) % 100));
+    }
+
     @Override
     public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
         context.fill(0, 0, this.width, this.height, 0x99020606);
@@ -232,8 +242,25 @@ public class ModBrowserScreen extends Screen {
             boolean hov = mouseX >= px + 14 && mouseX <= px + PANEL_W - 14
                     && mouseY >= y + i * 25 && mouseY < y + i * 25 + 22;
             VStyle.card(context, px + 14, y + i * 25, PANEL_W - 28, 22, hov);
-            String title = this.textRenderer.trimToWidth(e.title(), PANEL_W - 200);
-            context.drawTextWithShadow(this.textRenderer, title, px + 22, y + i * 25 + 7, VStyle.TEXT);
+
+            // Vorschaubild links; solange keins da ist, eine Kachel aus dem
+            // Anfangsbuchstaben — so springt die Zeile beim Nachladen nicht.
+            ProjektBild.anfordern(e.projectId(), e.iconUrl());
+            int bx = px + 17;
+            int by = y + i * 25 + 3;
+            var bild = ProjektBild.textur(e.projectId());
+            if (bild != null) {
+                Compat.drawTex(context, bild, bx, by, 16, 16, 16, 16, 0xFFFFFFFF);
+            } else {
+                VStyle.roundRect(context, bx, by, 16, 16, VStyle.R_XS, farbeAus(e.title()));
+                String b = e.title().isEmpty() ? "?" : e.title().substring(0, 1).toUpperCase();
+                context.drawText(this.textRenderer, b,
+                        bx + (16 - this.textRenderer.getWidth(b)) / 2, by + 4, 0xFFFFFFFF, false);
+            }
+
+            String title = this.textRenderer.trimToWidth(e.title(), PANEL_W - 220);
+            context.drawTextWithShadow(this.textRenderer, title, px + 38, y + i * 25 + 7,
+                    VStyle.TEXT);
             context.drawTextWithShadow(this.textRenderer, "§8" + e.downloads(),
                     px + PANEL_W - 140, y + i * 25 + 7, VStyle.TEXT_FAINT);
         }

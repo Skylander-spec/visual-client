@@ -2,6 +2,7 @@ package dev.visual.fabric.mixin;
 
 import dev.visual.fabric.CapeManager;
 import dev.visual.fabric.Compat;
+import dev.visual.fabric.MiniMe;
 import dev.visual.fabric.VConfig;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
@@ -32,6 +33,9 @@ public class PlayerEntityRendererMixin {
         }
 
         boolean self = player == MinecraftClient.getInstance().player;
+        // Der Mini-Me haengt nur am eigenen Spieler; welcher Render-Zustand
+        // das ist, laesst sich spaeter beim Zeichnen nicht mehr ablesen.
+        MiniMe.merken(state, self);
         boolean[] visible = self ? VConfig.get().armorSelf : VConfig.get().armorOthers;
         if (!visible[0]) state.equippedHeadStack = ItemStack.EMPTY;
         if (!visible[1]) state.equippedChestStack = ItemStack.EMPTY;

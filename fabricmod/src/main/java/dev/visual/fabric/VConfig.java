@@ -58,6 +58,10 @@ public class VConfig {
     public boolean shoulderCam = false;
     public boolean hitParticles = false;
     public boolean potionHud = false;
+    /** Mini-Me: verkleinerte Ausgabe des eigenen Spielers als Begleiter. */
+    public boolean miniMe = false;
+    public int miniMePos = 1;        // 0 = Kopf, 1 = linke Schulter, 2 = rechte Schulter
+    public int miniMeSize = 35;      // Prozent der normalen Größe
     public int crosshairStyle = 0;   // 0 = Kreuz, 1 = Punkt, 2 = Kreis
     public int crosshairSize = 5;
     public int crosshairGap = 2;

@@ -90,7 +90,8 @@ public class VisualHomeScreen extends VMouseScreen {
                     || id.equals("target") || id.equals("radar") || id.equals("crosshair");
             case 3 -> id.equals("zoom") || id.equals("freelook") || id.equals("fullbright")
                     || id.equals("sky") || id.equals("hands") || id.equals("vanillahud");
-            case 4 -> id.equals("fakeplayer") || id.equals("titlescreen") || id.equals("menukey")
+            case 4 -> id.equals("minime") || id.equals("fakeplayer")
+                    || id.equals("titlescreen") || id.equals("menukey")
                     || id.equals("mods") || id.equals("packs");
             default -> true;
         };

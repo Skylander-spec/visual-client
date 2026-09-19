@@ -254,8 +254,7 @@ export default function Mods({
                     return (
                       <div
                         key={item.fileName}
-                        className="card row"
-                        style={{ opacity: item.enabled ? 1 : 0.55 }}
+                        className={'card row modrow' + (item.enabled ? '' : ' aus')}
                       >
                         {item.iconUrl ? (
                           <img className="mod-icon" src={item.iconUrl} alt="" />
@@ -285,14 +284,15 @@ export default function Mods({
                           </button>
                         )}
                         <button
-                          className="btn"
+                          className="switchbtn"
                           title={item.enabled ? t('common.disable') : t('common.enable')}
+                          aria-pressed={item.enabled}
                           onClick={() => toggleFile(item)}
                         >
-                          {item.enabled ? '⏻' : '○'}
+                          <span className={'switch' + (item.enabled ? ' on' : '')} />
                         </button>
                         <button
-                          className="btn danger"
+                          className="btn ghost iconbtn"
                           title={t('common.remove')}
                           onClick={() =>
                             item.projectId ? uninstall(item.projectId) : removeFile(item)

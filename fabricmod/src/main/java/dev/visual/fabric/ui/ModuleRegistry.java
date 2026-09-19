@@ -22,6 +22,8 @@ public final class ModuleRegistry {
             {0x22D3EE, 0xF45568, 0x34D399, 0xFACC15, 0xC084FC, 0xFFFFFF};
     private static final String[] COLOR_NAMES =
             {"val.cyan", "val.red", "val.green", "val.yellow", "val.purple", "val.white"};
+    private static final String[] MINI_POS =
+            {"val.head", "val.leftshoulder", "val.rightshoulder"};
     private static final String[] PIECES =
             {"val.helmet", "val.chest", "val.legs", "val.boots"};
 
@@ -197,6 +199,18 @@ public final class ModuleRegistry {
                         () -> set(() -> c.timeMode =
                                 (c.timeMode + TIME_MODES.length - 1) % TIME_MODES.length),
                         () -> set(() -> c.timeMode = (c.timeMode + 1) % TIME_MODES.length))));
+
+        list.add(new VModule("minime", "☗", VText.t("mod.minime"),
+                VText.t("mod.minime.d"),
+                () -> c.miniMe, v -> set(() -> c.miniMe = v))
+                .add(new VSetting.Stepper(VText.t("set.seat"),
+                        () -> VText.t(MINI_POS[c.miniMePos]),
+                        () -> set(() -> c.miniMePos =
+                                (c.miniMePos + MINI_POS.length - 1) % MINI_POS.length),
+                        () -> set(() -> c.miniMePos = (c.miniMePos + 1) % MINI_POS.length)))
+                .add(new VSetting.Stepper(VText.t("set.size"), () -> c.miniMeSize + "%",
+                        () -> set(() -> c.miniMeSize = Math.max(15, c.miniMeSize - 5)),
+                        () -> set(() -> c.miniMeSize = Math.min(80, c.miniMeSize + 5)))));
 
         list.add(new VModule("fakeplayer", "☻", VText.t("mod.fakeplayer"),
                 VText.t("mod.fakeplayer.d"),
