@@ -58,7 +58,7 @@ if (!gh) {
   console.log('  gh auth login')
   console.log('')
   console.log('Danach reicht kuenftig "npm run publish". Diesmal von Hand:')
-  console.log(`  gh release create ${tag} --repo ${REPO} --title "Visual Client ${version}" \`)
+  console.log(`  gh release create ${tag} --repo ${REPO} --title "Visual Client ${version}"`)
   console.log(`    ${dateien.map((f) => `"${f}"`).join(' ')}`)
   process.exit(0)
 }
