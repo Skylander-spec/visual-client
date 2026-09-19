@@ -69,4 +69,22 @@ public final class Compat {
         state.capeVisible = true;
     }
 
+    /**
+     * Skin des Render-Zustands austauschen. Der Mini-Me darf einen eigenen
+     * tragen — gesetzt wird er nur fuer dessen Durchgang und danach wieder
+     * zurueckgenommen. Bis 1.21.8 steht die Textur an erster Stelle des
+     * SkinTextures-Records.
+     */
+    public static void applySkin(net.minecraft.client.render.entity.state.PlayerEntityRenderState state,
+                                 Identifier skin) {
+        net.minecraft.client.util.SkinTextures s = state.skinTextures;
+        if (s == null) return;
+        state.skinTextures = new net.minecraft.client.util.SkinTextures(
+                skin, s.textureUrl(), s.capeTexture(), s.elytraTexture(), s.model(), s.secure());
+    }
+    /** Gegenstueck zu applySkin: den gemerkten Skin zurueckgeben. */
+    public static void restoreSkin(net.minecraft.client.render.entity.state.PlayerEntityRenderState state,
+                                   Object vorher) {
+        if (vorher instanceof net.minecraft.client.util.SkinTextures s) state.skinTextures = s;
+    }
 }

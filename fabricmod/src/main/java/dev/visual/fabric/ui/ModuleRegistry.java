@@ -2,6 +2,8 @@ package dev.visual.fabric.ui;
 
 import dev.visual.fabric.FakePlayerManager;
 import dev.visual.fabric.HudEditorScreen;
+import dev.visual.fabric.MiniMe;
+import dev.visual.fabric.MiniSkin;
 import dev.visual.fabric.ModBrowserScreen;
 import dev.visual.fabric.VConfig;
 import net.minecraft.client.MinecraftClient;
@@ -23,7 +25,7 @@ public final class ModuleRegistry {
     private static final String[] COLOR_NAMES =
             {"val.cyan", "val.red", "val.green", "val.yellow", "val.purple", "val.white"};
     private static final String[] MINI_POS =
-            {"val.head", "val.leftshoulder", "val.rightshoulder"};
+            {"val.head", "val.leftshoulder", "val.rightshoulder", "val.follow"};
     private static final String[] PIECES =
             {"val.helmet", "val.chest", "val.legs", "val.boots"};
 
@@ -210,7 +212,22 @@ public final class ModuleRegistry {
                         () -> set(() -> c.miniMePos = (c.miniMePos + 1) % MINI_POS.length)))
                 .add(new VSetting.Stepper(VText.t("set.size"), () -> c.miniMeSize + "%",
                         () -> set(() -> c.miniMeSize = Math.max(15, c.miniMeSize - 5)),
-                        () -> set(() -> c.miniMeSize = Math.min(80, c.miniMeSize + 5)))));
+                        () -> set(() -> c.miniMeSize = Math.min(80, c.miniMeSize + 5))))
+                .add(new VSetting.Toggle(VText.t("set.sitting"), () -> c.miniMeSitzt,
+                        v -> set(() -> c.miniMeSitzt = v)))
+                .add(new VSetting.Stepper(VText.t("set.hat"),
+                        () -> VText.t(MiniMe.HUT_NAMEN[c.miniMeHut]),
+                        () -> set(() -> c.miniMeHut =
+                                (c.miniMeHut + MiniMe.HUT_NAMEN.length - 1)
+                                        % MiniMe.HUT_NAMEN.length),
+                        () -> set(() -> c.miniMeHut =
+                                (c.miniMeHut + 1) % MiniMe.HUT_NAMEN.length)))
+                .add(new VSetting.Toggle(VText.t("set.wings"), () -> c.miniMeFluegel,
+                        v -> set(() -> c.miniMeFluegel = v)))
+                .add(new VSetting.Stepper(VText.t("set.ownskin"),
+                        () -> c.miniMeSkin.isEmpty() ? VText.t("val.ownskin") : c.miniMeSkin,
+                        () -> set(() -> c.miniMeSkin = skinWechseln(c.miniMeSkin, -1)),
+                        () -> set(() -> c.miniMeSkin = skinWechseln(c.miniMeSkin, 1)))));
 
         list.add(new VModule("fakeplayer", "☻", VText.t("mod.fakeplayer"),
                 VText.t("mod.fakeplayer.d"),
@@ -260,6 +277,17 @@ public final class ModuleRegistry {
                         .setScreen(new ModBrowserScreen(parent, "resourcepack"))));
 
         return list;
+    }
+
+    /**
+     * Einen Schritt durch die Skin-Liste. Sie wird bei jedem Klick neu
+     * gelesen — wer im Launcher einen Skin ablegt, findet ihn sofort,
+     * ohne das Spiel neu zu starten.
+     */
+    private static String skinWechseln(String aktuell, int richtung) {
+        java.util.List<String> alle = MiniSkin.namen();
+        int i = Math.max(0, alle.indexOf(aktuell));
+        return alle.get((i + richtung + alle.size()) % alle.size());
     }
 
     private static void set(Runnable change) {

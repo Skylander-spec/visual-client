@@ -6,6 +6,7 @@
     "InGameHudMixin",
     "PlayerEntityRendererMixin",
     "LivingEntityRendererMixin",
+    "PlayerEntityModelMixin",
     "CameraMixin",
     "HeldItemRendererMixin",
     "TitleScreenMixin"

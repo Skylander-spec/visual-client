@@ -60,6 +60,7 @@ public class VisualsFabric implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             handleMenuKey(client);
             FakePlayerManager.tick(client);
+            MiniMe.tick(client);
             ClickTracker.tick(client);
             VisualsExtras.tick(client);
             applyFullbright(client);

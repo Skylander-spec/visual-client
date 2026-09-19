@@ -33,6 +33,7 @@ public abstract class LivingEntityRendererMixin {
         matrizen.push();
         try {
             MiniMe.platzieren(matrizen, zustand.bodyYaw);
+            MiniMe.anziehen(zustand);
             // Roher Typ mit Absicht: mit ? statt Typvariable lehnt der
             // Compiler den Zustand ab, obwohl es derselbe ist.
             @SuppressWarnings("rawtypes")
@@ -41,6 +42,7 @@ public abstract class LivingEntityRendererMixin {
         } catch (Throwable t) {
             // Ein Fehler hier wuerde jeden Frame kommen - lieber ohne Mini
         } finally {
+            MiniMe.ausziehen(zustand);
             matrizen.pop();
             MiniMe.beenden();
         }
