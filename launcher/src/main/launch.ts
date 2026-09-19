@@ -5,7 +5,7 @@ import { Client } from 'minecraft-launcher-core'
 import { DATA_DIR, MC_ROOT, instanceDir } from './paths'
 import { getProfile, touchLastPlayed } from './profiles'
 import { mclcAuth } from './auth'
-import { downloadFile } from './modrinth'
+import { downloadFile, installMod } from './modrinth'
 import { ensureFabric, ensureQuilt } from './fabric'
 import { ensureNeoForge, neoforgeJvmArgs } from './neoforge'
 import { installVisuals, installBranding } from './visuals'
@@ -306,6 +306,31 @@ function spracheVorbelegen(dir: string, lang: string, legacy: boolean): void {
   }
 }
 
+/**
+ * Sorgt dafuer, dass die Fabric API im Profil liegt.
+ *
+ * Unser Client-Mod fuehrt sie als harte Abhaengigkeit ("fabric-api": "*").
+ * Fehlt sie, laedt Fabric unseren Mod nicht -- der Spieler sieht das
+ * Vanilla-Menue und bekommt nirgends gesagt, warum. In einem Profil mit
+ * vielen Mods ist sie ohnehin dabei, in einem frischen nicht; genau
+ * deshalb ist das nie aufgefallen.
+ */
+async function sichereFabricApi(profileId: string, loader: string): Promise<void> {
+  if (loader !== 'fabric' && loader !== 'quilt') return
+  try {
+    const dir = path.join(instanceDir(profileId), 'mods')
+    fs.mkdirSync(dir, { recursive: true })
+    const da = fs
+      .readdirSync(dir)
+      .some((f) => /^fabric[-_]api/i.test(f) && f.toLowerCase().endsWith('.jar'))
+    if (da) return
+    await installMod(profileId, 'fabric-api', 'mod')
+  } catch (err) {
+    // Ohne Netz bleibt es beim Vanilla-Menue -- das Spiel startet trotzdem
+    console.error('[visuals] Fabric API konnte nicht nachinstalliert werden:', err)
+  }
+}
+
 export async function launchProfile(
   win: BrowserWindow,
   profileId: string,
@@ -398,6 +423,7 @@ export async function launchProfile(
       extraJvmArgs = extraJvmArgs.concat(profile.javaArgs.split(/\s+/).filter(Boolean))
     }
     // Branding-Mod (Fenstertitel + V-Icon) automatisch in Fabric/Quilt-Profile
+    await sichereFabricApi(profile.id, loader)
     installBranding(profile.id, loader, profile.mcVersion)
     if (profile.autoVisuals) {
       try {

@@ -258,6 +258,20 @@ export default function Home({
           className="ncard"
           style={{
             background:
+              'linear-gradient(160deg, rgba(43,75,255,0.38), rgba(3,10,9,0.9) 70%), radial-gradient(200px 100px at 80% 20%, rgba(99,132,255,0.35), transparent), var(--bg-2)',
+            opacity: packBusy ? 0.6 : 1
+          }}
+          onClick={installPack}
+        >
+          <div className="nt">{'✦ ' + t('home.pack')}</div>
+          <div className="nd">
+            {packBusy ? packText || t('home.packBusy') : t('home.packDesc')}
+          </div>
+        </div>
+        <div
+          className="ncard"
+          style={{
+            background:
               'linear-gradient(160deg, rgba(20,184,166,0.35), rgba(3,10,9,0.9) 70%), radial-gradient(200px 100px at 80% 20%, rgba(45,212,191,0.4), transparent), var(--bg-2)'
           }}
           onClick={installVisuals}
