@@ -1,0 +1,14 @@
+{
+  "hit": {
+    "category": "player",
+    "sounds": [{ "name": "visualpack:hit", "volume": 0.9 }]
+  },
+  "kill": {
+    "category": "player",
+    "sounds": [{ "name": "visualpack:kill", "volume": 1.0 }]
+  },
+  "ui_click": {
+    "category": "master",
+    "sounds": [{ "name": "visualpack:ui_click", "volume": 0.6 }]
+  }
+}

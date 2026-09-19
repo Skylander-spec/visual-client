@@ -1,0 +1,14 @@
+{
+  "entity.player.attack.strong": {
+    "replace": true,
+    "sounds": [{ "name": "visualpack:hit", "volume": 0.9 }]
+  },
+  "entity.player.attack.sweep": {
+    "replace": true,
+    "sounds": [{ "name": "visualpack:hit", "volume": 0.7, "pitch": 0.9 }]
+  },
+  "entity.player.attack.crit": {
+    "replace": true,
+    "sounds": [{ "name": "visualpack:hit", "volume": 1.0, "pitch": 1.15 }]
+  }
+}

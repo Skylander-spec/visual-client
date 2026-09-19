@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "visualsfabric",
+  "version": "1.0.0",
+  "name": "Visual Client",
+  "description": "PvP-Visuals fuer Minecraft 1.8.9 — HUD, Tastenanzeige, CPS.",
+  "authors": ["Visual"],
+  "environment": "client",
+  "entrypoints": { "client": ["dev.visual.legacy.VisualsLegacy"] },
+  "mixins": ["visualsfabric.mixins.json"],
+  "depends": { "minecraft": "1.8.9" }
+}

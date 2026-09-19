@@ -1,0 +1,7 @@
+{
+  "required": true,
+  "package": "dev.visual.legacy.mixin",
+  "compatibilityLevel": "JAVA_8",
+  "client": ["InGameHudMixin", "MinecraftClientMixin"],
+  "injectors": { "defaultRequire": 1 }
+}

@@ -1,0 +1,87 @@
+package dev.visual.fabric;
+
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gl.RenderPipelines;
+import net.minecraft.client.texture.NativeImage;
+import net.minecraft.client.texture.NativeImageBackedTexture;
+import net.minecraft.client.util.InputUtil;
+import net.minecraft.particle.ParticleEffect;
+import net.minecraft.util.Identifier;
+import net.minecraft.world.World;
+import org.lwjgl.glfw.GLFW;
+
+/** Versionsabhängige Aufrufe für 1.21.9+ (KeyBinding.Category statt String). */
+public final class Compat {
+    private Compat() {
+    }
+
+    public static KeyBinding registerMenuKey() {
+        return KeyBindingHelper.registerKeyBinding(new KeyBinding(
+                "key.visualsfabric.menu",
+                InputUtil.Type.KEYSYM,
+                GLFW.GLFW_KEY_RIGHT_SHIFT,
+                KeyBinding.Category.MISC));
+    }
+
+    /** 1.21.9+: InputUtil erwartet das Window-Objekt. */
+    public static boolean isKeyDown(MinecraftClient client, int key) {
+        return InputUtil.isKeyPressed(client.getWindow(), key);
+    }
+
+    /** 1.21.9+: Textur mit Label-Supplier. */
+    public static void registerTexture(MinecraftClient client, Identifier id, NativeImage img) {
+        client.getTextureManager().registerTexture(id, new NativeImageBackedTexture(id::toString, img));
+    }
+
+    /** 1.21.9+: Textur skaliert zeichnen, ARGB als Tönung/Alpha. */
+    public static void drawTex(DrawContext ctx, Identifier id, int x, int y, int w, int h,
+                               int texW, int texH, int argb) {
+        ctx.drawTexture(RenderPipelines.GUI_TEXTURED, id, x, y, 0f, 0f, w, h,
+                texW, texH, texW, texH, argb);
+    }
+
+    /** Partikel clientseitig erzeugen (Methodenname unterscheidet sich je Version). */
+    public static void spawnParticle(World world, ParticleEffect effect,
+                                     double x, double y, double z,
+                                     double vx, double vy, double vz) {
+        world.addParticleClient(effect, x, y, z, vx, vy, vz);
+    }
+
+    /** Matrix3x2fStack-API (ab 1.21.6). */
+    public static void hudPush(DrawContext ctx) { ctx.getMatrices().pushMatrix(); }
+
+    public static void hudTranslate(DrawContext ctx, float x, float y) {
+        ctx.getMatrices().translate(x, y);
+    }
+
+    public static void hudPop(DrawContext ctx) { ctx.getMatrices().popMatrix(); }
+
+    /** Ab 1.21.9: Cape ist ein TextureAsset, das nur den Pfad liefert. */
+    public static void applyCape(net.minecraft.client.render.entity.state.PlayerEntityRenderState state,
+                                 Identifier cape) {
+        net.minecraft.entity.player.SkinTextures s = state.skinTextures;
+        if (s == null) return;
+        // TextureAsset erbt id() von AssetInfo und ergänzt texturePath() —
+        // zwei abstrakte Methoden, also keine Funktionsschnittstelle und
+        // damit kein Lambda. Beide liefern dieselbe registrierte Kennung.
+        net.minecraft.util.AssetInfo.TextureAsset asset =
+                new net.minecraft.util.AssetInfo.TextureAsset() {
+                    @Override
+                    public Identifier id() {
+                        return cape;
+                    }
+
+                    @Override
+                    public Identifier texturePath() {
+                        return cape;
+                    }
+                };
+        state.skinTextures = new net.minecraft.entity.player.SkinTextures(
+                s.body(), asset, s.elytra(), s.model(), s.secure());
+        state.capeVisible = true;
+    }
+
+}

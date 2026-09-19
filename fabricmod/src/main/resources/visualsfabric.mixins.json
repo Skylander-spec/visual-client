@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "package": "dev.visual.fabric.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "InGameHudMixin",
+    "PlayerEntityRendererMixin",
+    "CameraMixin",
+    "HeldItemRendererMixin",
+    "TitleScreenMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

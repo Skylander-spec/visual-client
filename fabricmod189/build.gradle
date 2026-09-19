@@ -1,0 +1,49 @@
+/*
+ * Eigenes Projekt für Minecraft 1.8.9 — bewusst getrennt vom 1.21er Mod.
+ *
+ * Gründe für die Trennung: 1.8.9 kennt weder DrawContext noch die modernen
+ * Render-States, die Mixin-Ziele heißen anders, und der Bytecode muss auf
+ * Java 8 laufen. Gemeinsamer Quelltext wäre nur eine Kette von Fallunter-
+ * scheidungen. Loader und Mappings kommen von Legacy Fabric, das Fabric für
+ * die alten Versionen weiterführt.
+ */
+plugins {
+    id 'fabric-loom' version '1.11.8'
+}
+
+version = '1.0.0'
+group = 'dev.visual'
+
+base {
+    archivesName = 'visuals-fabric-1.8.9'
+}
+
+repositories {
+    maven {
+        name = 'Legacy Fabric'
+        url = 'https://repo.legacyfabric.net/repository/legacyfabric/'
+    }
+}
+
+loom {
+    // Loom holt Intermediary sonst von fabricmc.net — dort gibt es für
+    // 1.8.9 keins. Legacy Fabric pflegt ein eigenes.
+    intermediaryUrl = 'https://repo.legacyfabric.net/repository/legacyfabric/net/legacyfabric/intermediary/%1$s/intermediary-%1$s-v2.jar'
+}
+
+dependencies {
+    minecraft 'com.mojang:minecraft:1.8.9'
+    mappings 'net.legacyfabric:yarn:1.8.9+build.604:v2'
+    modImplementation 'net.fabricmc:fabric-loader:0.19.3'
+}
+
+java {
+    // 1.8.9 läuft auf Java 8; höher übersetzter Bytecode wird nicht geladen.
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}

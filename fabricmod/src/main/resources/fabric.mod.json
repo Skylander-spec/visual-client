@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "visualsfabric",
+  "version": "${version}",
+  "name": "VisualsFabric",
+  "description": "Visual Client In-Game-Menü: Rüstungs-Sichtbarkeit, Fake Player, Visuals und Mod-Browser.",
+  "authors": ["visual"],
+  "environment": "client",
+  "entrypoints": {
+    "client": ["dev.visual.fabric.VisualsFabric"]
+  },
+  "mixins": ["visualsfabric.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.15.0",
+    "minecraft": "${mcDepends}",
+    "fabric-api": "*"
+  }
+}

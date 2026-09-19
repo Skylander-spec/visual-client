@@ -1,0 +1,18 @@
+# Abhaengigkeiten und Build-Ausgaben — werden aus dem Quelltext erzeugt
+node_modules/
+launcher/out/
+launcher/dist/
+fabricmod/build/
+fabricmod189/build/
+brandingmod/build/
+mod/build/
+.gradle/
+*.log
+
+# launcher/build/ bleibt bewusst drin: dort liegen die fertigen Mod-Jars,
+# das Icon und das Branding, die electron-builder in den Installer packt.
+# Ohne sie liesse sich aus einem frischen Klon kein Installer bauen.
+
+# Nichts vom Spieler gehoert ins Repo
+*.env
+.claude/settings.local.json

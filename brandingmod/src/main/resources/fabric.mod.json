@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "visualbranding",
+  "version": "${version}",
+  "name": "Visual Branding",
+  "description": "Setzt Fenstertitel und Icon des Spiels auf Visual Client.",
+  "authors": ["visual"],
+  "environment": "client",
+  "entrypoints": {
+    "client": ["dev.visual.branding.VisualBranding"]
+  },
+  "depends": {
+    "fabricloader": ">=0.15.0",
+    "minecraft": "*",
+    "fabric-api": "*"
+  }
+}

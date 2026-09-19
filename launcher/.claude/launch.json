@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "visual-launcher-ui",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "--config", "electron.vite.config.ts", "--port", "5199"],
+      "port": 5199
+    }
+  ]
+}
