@@ -3,6 +3,7 @@ package dev.visual.fabric;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import dev.visual.fabric.ui.VScale;
 import dev.visual.fabric.ui.VButton;
 import dev.visual.fabric.ui.VStyle;
 import dev.visual.fabric.ui.VText;
@@ -56,8 +57,12 @@ public class ModBrowserScreen extends Screen {
 
     @Override
     protected void init() {
-        px = (this.width - PANEL_W) / 2;
-        py = (this.height - PANEL_H) / 2;
+        VScale.anwenden(this);
+        // Bei kleinem Fenster ragte das Feld sonst ueber den Rand hinaus
+        int pw = Math.min(PANEL_W, this.width - 20);
+        int ph = Math.min(PANEL_H, this.height - 20);
+        px = (this.width - pw) / 2;
+        py = (this.height - ph) / 2;
 
         searchField = new TextFieldWidget(this.textRenderer, px + 14, py + 30, PANEL_W - 108, 18,
                 Text.literal("Suche"));
@@ -277,5 +282,11 @@ public class ModBrowserScreen extends Screen {
     @Override
     public boolean shouldPause() {
         return false;
+    }
+
+    @Override
+    public void removed() {
+        VScale.zuruecksetzen();
+        super.removed();
     }
 }

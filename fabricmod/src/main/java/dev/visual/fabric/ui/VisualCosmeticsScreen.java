@@ -33,10 +33,11 @@ public class VisualCosmeticsScreen extends VMouseScreen {
     private static final int NAV_H = 48;
     private static final int PAD = 28;
     private static final int ZU = 24;
-    /** Linke Spalte mit den Rubriken. */
-    private static final int RAIL_W = 96;
+    /** Linke Spalte mit den Rubriken — bei engem Fenster fällt sie weg. */
+    private static final int RAIL_MAX = 96;
     /** Rechte Spalte mit der großen Vorschau. */
-    private static final int VORSCHAU_W = 210;
+    private static final int VORSCHAU_MAX = 210;
+    private static final int VORSCHAU_MIN = 132;
     private static final int KACHEL_W = 104;
     private static final int KACHEL_H = 150;
     private static final int LUECKE = 10;
@@ -56,6 +57,7 @@ public class VisualCosmeticsScreen extends VMouseScreen {
 
     @Override
     protected void init() {
+        super.init();
         BlurGuard.off();
         umhaenge.clear();
         // Erster Eintrag ist immer der leere — sonst käme man nie wieder
@@ -99,13 +101,29 @@ public class VisualCosmeticsScreen extends VMouseScreen {
     protected void setInitialFocus() {
     }
 
+    /**
+     * Breite der Rubrikenspalte. Bei kleiner Fensterbreite — etwa bei hoher
+     * GUI-Skalierung oder Minecrafts Standardfenster — faellt sie ganz weg,
+     * sonst bliebe fuer die Kacheln nichts uebrig.
+     */
+    private int railBreite() {
+        return width < 520 ? 0 : RAIL_MAX;
+    }
+
+    /** Vorschauspalte, schrumpft mit und verschwindet erst ganz zum Schluss. */
+    private int vorschauBreite() {
+        if (width < 340) return 0;
+        if (width >= 560) return VORSCHAU_MAX;
+        return Math.max(VORSCHAU_MIN, width - 340 + VORSCHAU_MIN);
+    }
+
     private int spalten() {
-        int platz = width - RAIL_W - VORSCHAU_W - 3 * PAD;
+        int platz = width - railBreite() - vorschauBreite() - 3 * PAD;
         return Math.max(1, (platz + LUECKE) / (KACHEL_W + LUECKE));
     }
 
     private int rasterX() {
-        return RAIL_W + PAD;
+        return railBreite() + PAD;
     }
 
     private int rasterY() {
@@ -117,7 +135,7 @@ public class VisualCosmeticsScreen extends VMouseScreen {
     }
 
     private int vorschauX() {
-        return width - PAD - VORSCHAU_W;
+        return width - PAD - vorschauBreite();
     }
 
     private int vorschauH() {
@@ -156,10 +174,15 @@ public class VisualCosmeticsScreen extends VMouseScreen {
 
         // Linke Rubrikenspalte. Bisher gibt es nur Umhänge, aber die Spalte
         // hält den Platz für das, was noch dazukommt.
-        ctx.fill(0, NAV_H + 1, RAIL_W, height, VStyle.PANEL);
-        ctx.fill(RAIL_W, NAV_H + 1, RAIL_W + 1, height, VStyle.BORDER);
-        VStyle.roundRect(ctx, 8, NAV_H + 12, RAIL_W - 16, 24, VStyle.R_SMALL, VStyle.ACCENT_BG);
-        ctx.drawText(textRenderer, VText.t("ui.capes"), 18, NAV_H + 20, VStyle.TEXT, false);
+        int rail = railBreite();
+        if (rail > 0) {
+            ctx.fill(0, NAV_H + 1, rail, height, VStyle.PANEL);
+            ctx.fill(rail, NAV_H + 1, rail + 1, height, VStyle.BORDER);
+            VStyle.roundRect(ctx, 8, NAV_H + 12, rail - 16, 24, VStyle.R_SMALL,
+                    VStyle.ACCENT_BG);
+            ctx.drawText(textRenderer, VText.t("ui.capes"), 18, NAV_H + 20,
+                    VStyle.TEXT, false);
+        }
 
         zeichneRaster(ctx, mouseX, mouseY);
         zeichneVorschau(ctx, mouseX, mouseY);
@@ -194,24 +217,25 @@ public class VisualCosmeticsScreen extends VMouseScreen {
     }
 
     private void zeichneVorschau(DrawContext ctx, int mouseX, int mouseY) {
+        if (vorschauBreite() <= 0) return;
         int px = vorschauX();
         int py = NAV_H + 20;
         int ph = vorschauH();
-        VStyle.roundOutline(ctx, px, py, VORSCHAU_W, ph, VStyle.R_PANEL, VStyle.BORDER);
-        VStyle.roundRect(ctx, px, py, VORSCHAU_W, ph, VStyle.R_PANEL, VStyle.PANEL);
+        VStyle.roundOutline(ctx, px, py, vorschauBreite(), ph, VStyle.R_PANEL, VStyle.BORDER);
+        VStyle.roundRect(ctx, px, py, vorschauBreite(), ph, VStyle.R_PANEL, VStyle.PANEL);
 
         Umhang u = umhaenge.get(Math.min(gewaehlt, umhaenge.size() - 1));
-        zeichneTraeger(ctx, u, px + 20, py + 16, VORSCHAU_W - 40, ph - 110, 62);
+        zeichneTraeger(ctx, u, px + 20, py + 16, vorschauBreite() - 40, ph - 110, 62);
 
         int ty = py + ph - 86;
         String name = u.name() == null ? VText.t("ui.nocape") : u.name();
-        ctx.drawText(textRenderer, textRenderer.trimToWidth(name, VORSCHAU_W - 32),
+        ctx.drawText(textRenderer, textRenderer.trimToWidth(name, vorschauBreite() - 32),
                 px + 16, ty, VStyle.TEXT, false);
         boolean istAn = u.name() == null ? angelegt == null : u.name().equals(angelegt);
 
         int bx = px + 16;
         int by = knopfY();
-        int bw = VORSCHAU_W - 32;
+        int bw = vorschauBreite() - 32;
         boolean hover = mouseX >= bx && mouseX <= bx + bw && mouseY >= by && mouseY <= by + 26;
         VStyle.roundRect(ctx, bx, by, bw, 26, VStyle.R_SMALL,
                 istAn ? VStyle.GHOST_HOVER : hover ? VStyle.ACCENT_HOVER : VStyle.ACCENT);
@@ -276,7 +300,7 @@ public class VisualCosmeticsScreen extends VMouseScreen {
 
         int px = vorschauX();
         int by = knopfY();
-        if (mouseX >= px + 16 && mouseX <= px + VORSCHAU_W - 16
+        if (mouseX >= px + 16 && mouseX <= px + vorschauBreite() - 16
                 && mouseY >= by && mouseY <= by + 26) {
             Umhang u = umhaenge.get(Math.min(gewaehlt, umhaenge.size() - 1));
             CapeManager.anlegen(u.name());

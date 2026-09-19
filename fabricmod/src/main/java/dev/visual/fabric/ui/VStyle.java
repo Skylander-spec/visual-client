@@ -145,4 +145,23 @@ public final class VStyle {
         int kx = on ? x + w - knob - 2 : x + 2;
         roundRect(ctx, kx, y + 2, knob, knob, knob / 2, 0xFFFFFFFF);
     }
+
+    /**
+     * Ein Knopf im Stil des Clients — dieselbe Form, die auch unsere eigenen
+     * Bildschirme benutzen. Minecrafts Knoepfe werden damit uebermalt, damit
+     * Optionen, Mehrspieler und Welt-Auswahl nicht wie ein Fremdkoerper
+     * zwischen unseren Seiten stehen.
+     */
+    public static void knopf(DrawContext ctx, int x, int y, int w, int h,
+                             boolean hover, boolean aktiv) {
+        int rand = !aktiv ? BORDER : hover ? BORDER_HI : BORDER;
+        int fuellung = !aktiv ? 0x66141A20 : hover ? 0xB3222C35 : 0x991A2229;
+        roundOutline(ctx, x, y, w, h, R_SMALL, rand);
+        roundRect(ctx, x, y, w, h, R_SMALL, fuellung);
+        if (aktiv && hover) {
+            // schmaler Akzentstrich unten, wie bei den Reitern im Menue
+            int b = Math.min(w - 12, 24);
+            roundRect(ctx, x + (w - b) / 2, y + h - 3, b, 2, 1, ACCENT);
+        }
+    }
 }

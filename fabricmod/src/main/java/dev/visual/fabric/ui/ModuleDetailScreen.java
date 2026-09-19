@@ -28,6 +28,7 @@ public class ModuleDetailScreen extends VMouseScreen {
 
     @Override
     protected void init() {
+        super.init();
         BlurGuard.off();
     }
 

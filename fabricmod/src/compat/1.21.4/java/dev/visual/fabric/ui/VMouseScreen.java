@@ -12,6 +12,22 @@ public abstract class VMouseScreen extends Screen {
         super(title);
     }
 
+    /** Feste Arbeitsflaeche statt Vanilla-GUI-Skalierung. Der HUD-Editor will das nicht. */
+    protected boolean festeGroesse() {
+        return true;
+    }
+
+    @Override
+    protected void init() {
+        if (festeGroesse()) VScale.anwenden(this);
+    }
+
+    @Override
+    public void removed() {
+        VScale.zuruecksetzen();
+        super.removed();
+    }
+
     protected boolean handlePress(double mouseX, double mouseY, int button) {
         return false;
     }

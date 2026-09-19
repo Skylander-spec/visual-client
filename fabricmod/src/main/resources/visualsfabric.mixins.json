@@ -7,6 +7,9 @@
     "PlayerEntityRendererMixin",
     "LivingEntityRendererMixin",
     "PlayerEntityModelMixin",
+    "PressableWidgetMixin",
+    "ScreenBackgroundMixin",
+    "EntryListWidgetMixin",
     "CameraMixin",
     "HeldItemRendererMixin",
     "TitleScreenMixin"

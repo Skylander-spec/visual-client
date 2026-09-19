@@ -31,6 +31,8 @@ public class VConfig {
     public boolean radarNorthUp = false;
     /** Eigener Startbildschirm statt Minecrafts Auswahl. */
     public boolean customTitle = true;
+    /** Minecrafts eigene Knoepfe im Client-Stil zeichnen. */
+    public boolean clientMenues = true;
 
     public boolean fullbright = false;
     public boolean coords = false;

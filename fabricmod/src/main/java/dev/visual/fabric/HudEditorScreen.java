@@ -28,8 +28,15 @@ public class HudEditorScreen extends VMouseScreen {
         this.parent = parent;
     }
 
+    /** Der Editor zeigt echte HUD-Positionen — die haengen an der Vanilla-Stufe. */
+    @Override
+    protected boolean festeGroesse() {
+        return false;
+    }
+
     @Override
     protected void init() {
+        super.init();
         BlurGuard.off();
         addDrawableChild(new VButton(width / 2 - 104, height - 28, 100, 20,
                 Text.literal(VText.t("set.reset")), () -> {

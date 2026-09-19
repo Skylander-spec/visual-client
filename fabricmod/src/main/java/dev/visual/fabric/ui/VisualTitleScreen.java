@@ -26,9 +26,9 @@ import java.util.List;
  * unverändert, auch mit anderen Mods.
  */
 public class VisualTitleScreen extends VMouseScreen {
-    private static final int RAND = 28;
-    private static final int SPALTE = 196;
-    private static final int MITTE_B = 232;
+    private static final int RAND = 20;
+    private static final int SPALTE = 176;
+    private static final int MITTE_B = 224;
     private static final int KNOPF_H = 26;
     private static final int LUECKE = 8;
     private static final int ZEILE_H = 28;
@@ -54,12 +54,13 @@ public class VisualTitleScreen extends VMouseScreen {
 
     @Override
     protected void init() {
+        super.init();
         felder.clear();
         server.clear();
         MinecraftClient mc = MinecraftClient.getInstance();
 
         // Gespeicherte Server für den Schnellstart links
-        try {
+        if (!schmal()) try {
             ServerList liste = new ServerList(mc);
             liste.loadFile();
             for (int i = 0; i < Math.min(3, liste.size()); i++) server.add(liste.get(i));
@@ -84,13 +85,17 @@ public class VisualTitleScreen extends VMouseScreen {
         felder.add(new Feld(mx + halb + LUECKE, ry, halb, KNOPF_H, "▤", VText.t("ui.modules"), null,
                 () -> mc.setScreen(new VisualHomeScreen())));
 
-        // Rechte Spalte unter dem Konto-Chip
-        int rx = width - RAND - SPALTE;
-        int ry2 = my + KNOPF_H + LUECKE;
-        felder.add(new Feld(rx, ry2, SPALTE, KNOPF_H, "◈", VText.t("ui.cosmetics"), null,
+        // Cosmetics und Beenden: neben der Mitte, wenn Platz ist — sonst
+        // darunter. Bei Minecrafts Standardfenster (854x480) ueberlappten
+        // sich die drei Spalten sonst zu einem Brei.
+        int rx = schmal() ? mx : width - RAND - SPALTE;
+        int rb = schmal() ? halb : SPALTE;
+        int ry2 = schmal() ? ry + KNOPF_H + LUECKE : my + KNOPF_H + LUECKE;
+        felder.add(new Feld(rx, ry2, rb, KNOPF_H, "◈", VText.t("ui.cosmetics"), null,
                 () -> mc.setScreen(new VisualCosmeticsScreen())));
-        felder.add(new Feld(rx, ry2 + KNOPF_H + LUECKE, SPALTE, KNOPF_H, "✕", VText.t("ui.quit"),
-                null, mc::scheduleStop));
+        felder.add(new Feld(schmal() ? rx + halb + LUECKE : rx,
+                schmal() ? ry2 : ry2 + KNOPF_H + LUECKE, rb, KNOPF_H, "✕",
+                VText.t("ui.quit"), null, mc::scheduleStop));
 
         // Schnellstart links
         int lx = RAND;
@@ -190,7 +195,20 @@ public class VisualTitleScreen extends VMouseScreen {
 
     // ── Konto ───────────────────────────────────────────────────────────
 
+    /**
+     * Zu schmal fuer drei Spalten? Minecrafts Standardfenster ist 854x480,
+     * und bei ueblicher GUI-Skalierung bleiben davon rund 430 Pixel Breite —
+     * da passen Schnellstart, Mitte und rechte Spalte nicht nebeneinander.
+     */
+    private boolean schmal() {
+        return width < 2 * (RAND + SPALTE) + MITTE_B + 2 * LUECKE;
+    }
+
     private int[] kontoChip() {
+        if (schmal()) {
+            int b = Math.min(SPALTE, width - 2 * RAND);
+            return new int[]{width - RAND - b, RAND, b, KNOPF_H};
+        }
         return new int[]{width - RAND - SPALTE, height / 2 - 6, SPALTE, KNOPF_H};
     }
 

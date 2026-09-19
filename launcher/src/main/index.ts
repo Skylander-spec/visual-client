@@ -91,6 +91,7 @@ if (!gotLock) {
 app.whenReady().then(() => {
   if (!gotLock) return
   ensureDirs()
+  cosmetics.mitgelieferteCapes()
   registerIpc()
   createWindow()
 

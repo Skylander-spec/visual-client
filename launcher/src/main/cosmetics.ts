@@ -1,6 +1,7 @@
 import fs from 'fs'
+import crypto from 'crypto'
 import path from 'path'
-import { BrowserWindow, dialog } from 'electron'
+import { BrowserWindow, dialog, app } from 'electron'
 import { DATA_DIR, COSMETICS_DIR } from './paths'
 import { getActiveAccount, getMsAccessToken } from './auth'
 import { VError } from './errors'
@@ -201,5 +202,46 @@ export function activeCape(): string | null {
     return fs.readFileSync(marker, 'utf8').trim() || null
   } catch {
     return null
+  }
+}
+
+/**
+ * Legt die mitgelieferten Capes beim ersten Start in den Cape-Ordner.
+ *
+ * Kopiert wird nur, was noch nicht da ist — wer eins loescht oder
+ * umbenennt, bekommt es nicht wieder untergeschoben.
+ */
+const AUSGEMUSTERT: Record<string, string> = {
+  'Energy Dose Cyan.png': '697ad9f1d8e5bc592ef0522aadb7640dcae82797e30493691200eabed6c9511c',
+  'Energy Dose Lila.png': '506524329e8228489a6afb8cc670f99accced7200a06029407c599998f4ccbae',
+  'Flammen.png': '6ce85e9055f50bb33ab1129d7655793e7b7c6d73ddd7bc2b52d4c92f58fc38d9',
+  'Galaxie.png': 'b6e637869c05a5d57d572c22be77524fb46076127ec02481897c2815d63ae170',
+  'Wolf am Mond.png': '5d4c23bd64d5a4f3a602e429dd97f73f41065851957a791b4e527dd07537ba2c'
+}
+
+export function mitgelieferteCapes(): void {
+  try {
+    ensure()
+    // Alte, selbstgemalte Capes wegraeumen - aber nur, wenn sie Byte fuer Byte
+    // noch das sind, was wir ausgeliefert haben. Wer die Datei ersetzt hat,
+    // behaelt seine eigene.
+    for (const [datei, summe] of Object.entries(AUSGEMUSTERT)) {
+      const alt = path.join(CAPES_DIR, datei)
+      try {
+        if (!fs.existsSync(alt)) continue
+        const ist = crypto.createHash('sha256').update(fs.readFileSync(alt)).digest('hex')
+        if (ist === summe) fs.unlinkSync(alt)
+      } catch { /* einzelne Datei egal */ }
+    }
+    const quelle = path.join(app.getAppPath(), 'build', 'capes')
+    if (!fs.existsSync(quelle)) return
+    for (const datei of fs.readdirSync(quelle)) {
+      if (!datei.toLowerCase().endsWith('.png')) continue
+      const ziel = path.join(CAPES_DIR, datei)
+      if (fs.existsSync(ziel)) continue
+      fs.copyFileSync(path.join(quelle, datei), ziel)
+    }
+  } catch (err) {
+    console.error('[cosmetics] Mitgelieferte Capes konnten nicht abgelegt werden:', err)
   }
 }

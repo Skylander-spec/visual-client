@@ -50,6 +50,7 @@ public class VisualHomeScreen extends VMouseScreen {
 
     @Override
     protected void init() {
+        super.init();
         BlurGuard.off();
         modules = ModuleRegistry.all(this);
         search = new TextFieldWidget(textRenderer, sucheX() + 8, (NAV_H - 22) / 2, 182, 22,
@@ -100,8 +101,21 @@ public class VisualHomeScreen extends VMouseScreen {
     /** Waagerechte Lage und Breite eines Reiters. */
     private int reiterX(int i) {
         int x = PAD + 110;
-        for (int k = 0; k < i; k++) x += reiterBreite(k) + 22;
+        int l = reiterLuecke();
+        for (int k = 0; k < i; k++) x += reiterBreite(k) + l;
         return x;
+    }
+
+    /**
+     * Abstand zwischen den Reitern. Laenger uebersetzte Namen — Russisch ist
+     * breit — wuerden sonst unter dem Suchfeld verschwinden, also ruecken die
+     * Reiter zusammen, bis sie passen.
+     */
+    private int reiterLuecke() {
+        int text = 0;
+        for (int i = 0; i < REITER.length; i++) text += reiterBreite(i);
+        int platz = sucheX() - 12 - (PAD + 110) - text;
+        return Math.max(6, Math.min(22, platz / (REITER.length - 1)));
     }
 
     private int reiterBreite(int i) {
