@@ -26,11 +26,11 @@ import java.util.List;
  * unverändert, auch mit anderen Mods.
  */
 public class VisualTitleScreen extends VMouseScreen {
-    private static final int RAND = 20;
-    private static final int SPALTE = 176;
-    private static final int MITTE_B = 224;
-    private static final int KNOPF_H = 26;
-    private static final int LUECKE = 8;
+    private static final int RAND = 26;
+    private static final int SPALTE = 146;
+    private static final int MITTE_B = 218;
+    private static final int KNOPF_H = 21;
+    private static final int LUECKE = 9;
     private static final int ZEILE_H = 28;
 
     /** Eine anklickbare Fläche. */
@@ -128,10 +128,17 @@ public class VisualTitleScreen extends VMouseScreen {
         if (!gezeichnet) {
             ctx.fillGradient(0, 0, width, height, 0xFF0E1419, 0xFF11171C);
         }
-        // Dunkler Schleier, damit die Knöpfe lesbar bleiben
-        ctx.fill(0, 0, width, height, 0x73060A0E);
-        ctx.fillGradient(0, 0, width, 90, 0x4D00060A, 0x00000000);
-        ctx.fillGradient(0, height - 90, width, height, 0x00000000, 0x4D00060A);
+        // Weichzeichner statt Schleier: so macht es OneClient auch, nur mit
+        // einem eigenen Mod. Minecraft bringt ihn seit 1.20.5 selbst mit.
+        if (gezeichnet) {
+            try {
+                weichzeichnen(ctx);
+            } catch (Throwable t) {
+                // Kein Weichzeichner - dann reicht der leichte Schleier unten
+            }
+        }
+        // Nur noch ein Hauch dunkler, damit die Schrift trägt
+        ctx.fill(0, 0, width, height, 0x33060A0E);
     }
 
     /**
@@ -160,20 +167,45 @@ public class VisualTitleScreen extends VMouseScreen {
 
     // ── Kopf ────────────────────────────────────────────────────────────
 
+    /** Hoehe der Wortmarke in Textzeilen — an der Vorlage abgemessen. */
+    private static final float WORT_FAKTOR = 2.0f;
+    /** Zusaetzlicher Buchstabenabstand der Wortmarke, in Pixeln vor dem Vergroessern. */
+    private static final int WORT_SPERRE = 1;
+
     private void wortmarke(DrawContext ctx) {
         int cx = width / 2;
         int cy = height / 2 - 82;
 
-        // Bildmarke: vier Rauten um die Mitte
-        int s = 7;
-        VStyle.roundRect(ctx, cx - s / 2, cy - 18, s, s, 2, VStyle.TEXT);
-        VStyle.roundRect(ctx, cx - s / 2, cy - 4, s, s, 2, VStyle.TEXT);
-        VStyle.roundRect(ctx, cx - 14, cy - 11, s, s, 2, VStyle.ACCENT);
-        VStyle.roundRect(ctx, cx + 7, cy - 11, s, s, 2, VStyle.ACCENT);
+        // Bildmarke: vier Rauten um die Mitte. Abgemessen an der Vorlage,
+        // dort ist sie rund ein Drittel so hoch wie der Abstand zur ersten
+        // Knopfreihe — deshalb deutlich groesser als frueher.
+        int s = 10;
+        VStyle.roundRect(ctx, cx - s / 2, cy - 26, s, s, 3, VStyle.TEXT);
+        VStyle.roundRect(ctx, cx - s / 2, cy - 6, s, s, 3, VStyle.TEXT);
+        VStyle.roundRect(ctx, cx - 20, cy - 16, s, s, 3, VStyle.ACCENT);
+        VStyle.roundRect(ctx, cx + 10, cy - 16, s, s, 3, VStyle.ACCENT);
 
+        // Wortmarke doppelt so gross und gesperrt gesetzt. Minecrafts Font
+        // kennt keinen Buchstabenabstand, also wird Zeichen fuer Zeichen
+        // gezeichnet und der Abstand von Hand dazugerechnet.
         String wort = "VISUAL CLIENT";
-        int w = textRenderer.getWidth(wort);
-        ctx.drawText(textRenderer, wort, cx - w / 2, cy + 12, VStyle.TEXT, false);
+        int breite = 0;
+        for (int i = 0; i < wort.length(); i++) {
+            breite += textRenderer.getWidth(String.valueOf(wort.charAt(i))) + WORT_SPERRE;
+        }
+        breite -= WORT_SPERRE;
+
+        skalieren(ctx, cx - breite * WORT_FAKTOR / 2f, cy + 14, WORT_FAKTOR);
+        try {
+            int x = 0;
+            for (int i = 0; i < wort.length(); i++) {
+                String z = String.valueOf(wort.charAt(i));
+                ctx.drawText(textRenderer, z, x, 0, VStyle.TEXT, false);
+                x += textRenderer.getWidth(z) + WORT_SPERRE;
+            }
+        } finally {
+            zurueckskalieren(ctx);
+        }
     }
 
     private void spaltenKoepfe(DrawContext ctx) {
@@ -275,10 +307,20 @@ public class VisualTitleScreen extends VMouseScreen {
     // ── Knöpfe ──────────────────────────────────────────────────────────
 
     /** Durchscheinende Fläche mit Haarlinie — der Grundbaustein aller Knöpfe. */
+    /**
+     * Knopf auf dem Startbildschirm.
+     *
+     * Die Fuellung ist bewusst fast schwarz und nur halb deckend, kein
+     * eingefaerbtes Blau: an der Vorlage nachgerechnet ergaben zwei Messungen
+     * derselben Flaeche ueber verschiedenem Untergrund (37 ueber 69 und 68
+     * ueber rund 130) einen Alphawert um 0,5 bei nahezu schwarzer Farbe.
+     * Dadurch nimmt der Knopf den Ton des weichgezeichneten Panoramas an,
+     * statt als blauer Balken darueber zu liegen.
+     */
     private void glas(DrawContext ctx, int x, int y, int w, int h, boolean hover) {
+        VStyle.roundRect(ctx, x, y, w, h, VStyle.R_SMALL, hover ? 0x99202428 : 0x80101214);
         VStyle.roundOutline(ctx, x, y, w, h, VStyle.R_SMALL,
-                hover ? VStyle.BORDER_HI : VStyle.BORDER);
-        VStyle.roundRect(ctx, x, y, w, h, VStyle.R_SMALL, hover ? 0xB3222C35 : 0x991A2229);
+                hover ? 0x33FFFFFF : 0x1AFFFFFF);
     }
 
     private void zeichneFeld(DrawContext ctx, Feld f, boolean hover) {

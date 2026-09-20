@@ -1,6 +1,7 @@
 package dev.visual.fabric.ui;
 
 import net.minecraft.client.gui.Click;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.Text;
 
@@ -11,6 +12,30 @@ import net.minecraft.text.Text;
 public abstract class VMouseScreen extends Screen {
     protected VMouseScreen(Text title) {
         super(title);
+    }
+
+    /**
+     * Vanillas eigener Weichzeichner ueber dem Panorama. Bis 1.21.5 ohne
+     * Argument, ab 1.21.6 mit DrawContext - deshalb steht er hier und nicht
+     * im gemeinsamen Teil.
+     */
+    protected void weichzeichnen(DrawContext ctx) {
+        applyBlur(ctx);
+    }
+
+    /**
+     * Groesser zeichnen: alles zwischen skalieren und zurueck wird um
+     * {@code faktor} vergroessert, Ursprung ist (x, y). Der Matrizen-Typ
+     * wechselte mit 1.21.6, deshalb steht das hier.
+     */
+    protected void skalieren(DrawContext ctx, float x, float y, float faktor) {
+        ctx.getMatrices().pushMatrix();
+        ctx.getMatrices().translate(x, y);
+        ctx.getMatrices().scale(faktor, faktor);
+    }
+
+    protected void zurueckskalieren(DrawContext ctx) {
+        ctx.getMatrices().popMatrix();
     }
 
     /** Feste Arbeitsflaeche statt Vanilla-GUI-Skalierung. Der HUD-Editor will das nicht. */
