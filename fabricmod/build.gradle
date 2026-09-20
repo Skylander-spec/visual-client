@@ -30,11 +30,32 @@ base {
 
 sourceSets.main.java.srcDir "src/compat/${cfg.compat}/java"
 
+// OneConfig (Polyfrost) liefert das Menue, das wir wollen. Es ist LGPL-3.0
+// mit Zusatzbedingungen - Einbinden ist genau der Fall, fuer den die LGPL
+// gemacht ist, im Gegensatz zum Abschreiben der 1284 Klassen.
+def oneconfig = project.findProperty('oneconfig') ?: ''
+
+repositories {
+    maven {
+        name = 'Polyfrost'
+        url = 'https://repo.polyfrost.org/releases'
+    }
+    // OneConfig 1.2 zieht JetBrains Compose und androidx nach; die liegen
+    // nicht bei Polyfrost, sondern in diesen Quellen.
+    mavenCentral()
+    maven { url = 'https://maven.pkg.jetbrains.space/public/p/compose/dev' }
+    maven { url = 'https://api.modrinth.com/maven' }
+    google()
+}
+
 dependencies {
     minecraft "com.mojang:minecraft:${mcVer}"
     mappings "net.fabricmc:yarn:${cfg.yarn}:v2"
     modImplementation "net.fabricmc:fabric-loader:0.19.3"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${cfg.api}"
+    if (oneconfig) {
+        modCompileOnly "org.polyfrost.oneconfig:${oneconfig}:1.2.1"
+    }
 }
 
 java {
