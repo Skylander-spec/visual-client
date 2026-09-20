@@ -51,7 +51,9 @@ public class VisualHomeScreen extends VMouseScreen {
         // haengen - hier stehen nur Platzhalter.
         search = new TextFieldWidget(textRenderer, 0, 0, 100, 12,
                 Text.literal(VText.t("ui.search")));
-        search.setPlaceholder(Text.literal("§8" + VText.t("ui.search")));
+        // Kein Platzhalter am Widget: das zeichnet ihn mit Minecrafts
+        // eigener Schrift, egal welchen Stil man setzt. render() malt ihn
+        // selbst, solange nichts eingetippt ist.
         search.setDrawsBackground(false);
         search.setChangedListener(v -> {
             scroll = 0;
@@ -206,22 +208,36 @@ public class VisualHomeScreen extends VMouseScreen {
      * zwischen den Bildschirmen, nicht die Kategorien - die sitzen als Pillen
      * ueber dem Raster.
      */
-    private record Nav(String schluessel, String symbol, Runnable tun) {
+    private record Nav(String gruppe, String schluessel, String symbol, Runnable tun) {
     }
 
     private List<Nav> navEintraege() {
         MinecraftClient mc = MinecraftClient.getInstance();
         List<Nav> l = new ArrayList<>();
-        l.add(new Nav("ui.modules", "\u25a4", null));
-        l.add(new Nav("ui.cosmetics", "\u25c8", () -> mc.setScreen(new VisualCosmeticsScreen())));
-        l.add(new Nav("ui.hudedit", "\u25a6", () -> mc.setScreen(new HudEditorScreen(this))));
-        l.add(new Nav("ui.modbrowser", "\u2699",
+        l.add(new Nav("ui.secsettings", "ui.modules", "\u25a4", null));
+        l.add(new Nav(null, "ui.hudedit", "\u25a6", () -> mc.setScreen(new HudEditorScreen(this))));
+        l.add(new Nav("ui.seclook", "ui.cosmetics", "\u25c8", () -> mc.setScreen(new VisualCosmeticsScreen())));
+        l.add(new Nav("ui.secmore", "ui.modbrowser", "\u2699",
                 () -> mc.setScreen(new ModBrowserScreen(this, "mod"))));
         return l;
     }
 
+    /**
+     * Lage eines Nav-Eintrags. Ueberschriften brauchen eigene Zeilen, darum
+     * werden sie mitgezaehlt - sonst saessen Klickflaeche und Beschriftung
+     * auseinander.
+     */
     private int navY(int i) {
-        return panelY() + Math.round(height * 0.148f) + i * Math.round(height * 0.046f);
+        List<Nav> nav = navEintraege();
+        int y = panelY() + Math.round(height * 0.148f);
+        int zeile = Math.round(height * 0.046f);
+        int kopf = Math.round(height * 0.030f);
+        for (int k = 0; k < i; k++) {
+            if (nav.get(k).gruppe() != null) y += kopf;
+            y += zeile;
+        }
+        if (nav.get(i).gruppe() != null) y += kopf;
+        return y;
     }
 
     private int navH() {
@@ -386,6 +402,10 @@ public class VisualHomeScreen extends VMouseScreen {
         search.setY(zu[1] + (zu[3] - 10) / 2);
         search.setWidth(sucheB() - 16);
         search.render(ctx, mouseX, mouseY, delta);
+        if (search.getText().isEmpty()) {
+            VFont.zeichne(ctx, textRenderer, VText.t("ui.search"), sx + 8,
+                    zu[1] + (zu[3] - 8) / 2, VStyle.TEXT_FAINT);
+        }
         super.render(ctx, mouseX, mouseY, delta);
     }
 
@@ -403,6 +423,10 @@ public class VisualHomeScreen extends VMouseScreen {
         for (int i = 0; i < nav.size(); i++) {
             Nav n = nav.get(i);
             int ny = navY(i);
+            if (n.gruppe() != null) {
+                VFont.zeichne(ctx, textRenderer, VText.t(n.gruppe()), px + 16,
+                        ny - Math.round(height * 0.022f), VStyle.TEXT_FAINT);
+            }
             boolean aktiv = n.tun() == null;
             boolean hover = !aktiv && mouseX >= px + 8 && mouseX <= px + lw - 8
                     && mouseY >= ny && mouseY <= ny + navH();
