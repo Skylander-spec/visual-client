@@ -1,5 +1,7 @@
 package dev.visual.fabric.ui;
 
+import dev.visual.fabric.HudEditorScreen;
+import dev.visual.fabric.ModBrowserScreen;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.widget.TextFieldWidget;
@@ -9,25 +11,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Modul-Übersicht im Stil von OneClient: waagerechte Leiste oben mit
- * Wortmarke und Reitern, darunter ein Raster aus Kacheln.
+ * Modul-Übersicht im Aufbau der Vorlage: ein Panel, das über dem
+ * weichgezeichneten Spiel schwebt, links eine Seitenleiste mit Navigation,
+ * rechts Kategorie-Pillen über einem Raster aus vier Kartenspalten.
  *
- * Die Maße stammen aus OneClients Gestaltung: Leistenhöhe und Innenabstand
- * im selben Verhältnis, und der aktive Reiter bekommt eine Unterstreichung,
- * die beim Überfahren schon halb erscheint (dort 27 bzw. 18 Pixel breit).
+ * Alle Maße sind an der Vorlage gemessen (bei 1920x1080: Panel 96..1832 von
+ * 107..972, Trennlinie bei 423, Karten 314 breit mit 24 Abstand, 127 hoch
+ * plus 45 hoher Fußbalken) und als Anteil der Fläche hinterlegt, damit sie
+ * auf jeder Fenstergröße stimmen.
  */
 public class VisualHomeScreen extends VMouseScreen {
-    /** Höhe der oberen Leiste (OneClient: 80 px bei Desktop-Maßstab). */
-    private static final int NAV_H = 48;
-    /** Seitlicher Innenabstand (OneClient: HOME_PADDING_PX = 48). */
-    private static final int PAD = 28;
-    private static final int UNDERLINE_ACTIVE = 27;
-    private static final int UNDERLINE_HOVER = 18;
-    private static final int CARD_H = 54;
-    /** Kantenlänge des Schließen-Knopfes rechts in der Leiste. */
-    private static final int ZU = 24;
-    private static final int GAP = 10;
-
     /** Reiter der oberen Leiste. Leer = alle Module. */
     private static final String[] REITER =
             {"tab.all", "tab.hud", "tab.combat", "tab.view", "tab.cosmetics"};
@@ -51,9 +44,12 @@ public class VisualHomeScreen extends VMouseScreen {
     @Override
     protected void init() {
         super.init();
-        BlurGuard.off();
+        // Kein BlurGuard.off mehr: der Weichzeichner ist jetzt erwuenscht,
+        // das Panel schwebt darueber wie in der Vorlage.
         modules = ModuleRegistry.all(this);
-        search = new TextFieldWidget(textRenderer, sucheX() + 8, (NAV_H - 22) / 2, 182, 22,
+        // Lage und Breite setzt render() jedes Bild neu, weil sie am Panel
+        // haengen - hier stehen nur Platzhalter.
+        search = new TextFieldWidget(textRenderer, 0, 0, 100, 12,
                 Text.literal(VText.t("ui.search")));
         search.setPlaceholder(Text.literal("§8" + VText.t("ui.search")));
         search.setDrawsBackground(false);
@@ -98,56 +94,105 @@ public class VisualHomeScreen extends VMouseScreen {
         };
     }
 
-    /** Waagerechte Lage und Breite eines Reiters. */
-    private int reiterX(int i) {
-        int x = PAD + 110;
-        int l = reiterLuecke();
-        for (int k = 0; k < i; k++) x += reiterBreite(k) + l;
+    // ── Masse ───────────────────────────────────────────────────────────
+    //
+    // Alle Werte stammen aus der Vorlage, gemessen bei 1920x1080 und als
+    // Anteil der Flaeche hinterlegt, damit sie auf jeder Fenstergroesse
+    // passen: Panel 96..1832 von 107..972, Trennlinie zur Seitenleiste bei
+    // 423, Inhalt ab 455. Karten 314 breit mit 24 Abstand, 127 hoch plus
+    // 45 hoher Fussbalken, Zeilenabstand 198.
+
+    private int panelX() {
+        return Math.round(width * 0.050f);
+    }
+
+    private int panelY() {
+        return Math.round(height * 0.099f);
+    }
+
+    private int panelW() {
+        return Math.round(width * 0.904f);
+    }
+
+    private int panelH() {
+        return Math.round(height * 0.801f);
+    }
+
+    /** Breite der Seitenleiste, gemessen bis zur Trennlinie. */
+    private int leisteW() {
+        return Math.round(width * 0.170f);
+    }
+
+    /** Linke Kante des Karteninhalts. */
+    private int inhaltX() {
+        return panelX() + leisteW() + Math.round(width * 0.017f);
+    }
+
+    private int inhaltW() {
+        return panelX() + panelW() - inhaltX() - Math.round(width * 0.015f);
+    }
+
+    private int spalten() {
+        return 4;
+    }
+
+    private int kartenAbstand() {
+        return Math.max(4, Math.round(width * 0.0125f));
+    }
+
+    private int kartenB() {
+        int a = kartenAbstand();
+        return (inhaltW() - (spalten() - 1) * a) / spalten();
+    }
+
+    /** Dunkler Teil der Karte, ohne den Fussbalken. */
+    private int kartenKopfH() {
+        return Math.round(height * 0.1176f);
+    }
+
+    private int balkenH() {
+        return Math.round(height * 0.0417f);
+    }
+
+    private int kartenH() {
+        return kartenKopfH() + balkenH();
+    }
+
+    private int zeilenAbstand() {
+        return kartenH() + Math.max(4, Math.round(height * 0.024f));
+    }
+
+    /** Oberkante der Kartenflaeche, unter Titel und Kategorie-Pillen. */
+    private int gridTop() {
+        return panelY() + Math.round(height * 0.148f);
+    }
+
+    /** Waagerechte Lage und Breite einer Kategorie-Pille. */
+    private int pilleX(int i) {
+        int x = inhaltX();
+        for (int k = 0; k < i; k++) x += pilleB(k) + 6;
         return x;
     }
 
-    /**
-     * Abstand zwischen den Reitern. Laenger uebersetzte Namen — Russisch ist
-     * breit — wuerden sonst unter dem Suchfeld verschwinden, also ruecken die
-     * Reiter zusammen, bis sie passen.
-     */
-    private int reiterLuecke() {
-        int text = 0;
-        for (int i = 0; i < REITER.length; i++) text += reiterBreite(i);
-        int platz = sucheX() - 12 - (PAD + 110) - text;
-        return Math.max(6, Math.min(22, platz / (REITER.length - 1)));
+    private int pilleB(int i) {
+        return VFont.breite(textRenderer, VText.t(REITER[i])) + 18;
     }
 
-    private int reiterBreite(int i) {
-        return textRenderer.getWidth(VText.t(REITER[i]));
+    private int pilleY() {
+        return panelY() + Math.round(height * 0.105f);
     }
 
-    /** Linke Kante der Suchfläche — der Schließen-Knopf sitzt rechts daneben. */
-    private int sucheX() {
-        return width - PAD - ZU - 8 - 198;
+    private int pilleH() {
+        return Math.round(height * 0.0408f);
     }
 
-    private int zuX() {
-        return width - PAD - ZU;
-    }
 
-    private int columns() {
-        return Math.max(1, (width - 2 * PAD) / 260);
-    }
-
-    private int cardW() {
-        int cols = columns();
-        return (width - 2 * PAD - (cols - 1) * GAP) / cols;
-    }
-
-    private int gridTop() {
-        return NAV_H + 18;
-    }
 
     private int maxScroll() {
-        int rows = (shown.size() + columns() - 1) / columns();
-        int total = rows * (CARD_H + GAP);
-        return Math.max(0, total - (height - gridTop() - 16));
+        int reihen = (shown.size() + spalten() - 1) / spalten();
+        int gesamt = reihen * zeilenAbstand();
+        int sichtbar = panelY() + panelH() - gridTop() - 8;
+        return Math.max(0, gesamt - sichtbar);
     }
 
     @Override
@@ -156,41 +201,91 @@ public class VisualHomeScreen extends VMouseScreen {
         return true;
     }
 
+    /**
+     * Ein Eintrag der Seitenleiste. In der Vorlage steht dort die Navigation
+     * zwischen den Bildschirmen, nicht die Kategorien - die sitzen als Pillen
+     * ueber dem Raster.
+     */
+    private record Nav(String schluessel, String symbol, Runnable tun) {
+    }
+
+    private List<Nav> navEintraege() {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        List<Nav> l = new ArrayList<>();
+        l.add(new Nav("ui.modules", "\u25a4", null));
+        l.add(new Nav("ui.cosmetics", "\u25c8", () -> mc.setScreen(new VisualCosmeticsScreen())));
+        l.add(new Nav("ui.hudedit", "\u25a6", () -> mc.setScreen(new HudEditorScreen(this))));
+        l.add(new Nav("ui.modbrowser", "\u2699",
+                () -> mc.setScreen(new ModBrowserScreen(this, "mod"))));
+        return l;
+    }
+
+    private int navY(int i) {
+        return panelY() + Math.round(height * 0.148f) + i * Math.round(height * 0.046f);
+    }
+
+    private int navH() {
+        return Math.round(height * 0.040f);
+    }
+
+    /** Das Kreuz oben rechts im Panel. */
+    private int[] zuFeld() {
+        int k = Math.round(height * 0.033f);
+        return new int[]{panelX() + panelW() - k - Math.round(width * 0.012f),
+                panelY() + Math.round(height * 0.030f), k, k};
+    }
+
+    private int sucheB() {
+        return Math.round(width * 0.17f);
+    }
+
+    private int sucheLinks() {
+        return inhaltX() + inhaltW() - sucheB() - zuFeld()[2] - 8;
+    }
+
     @Override
     protected boolean handlePress(double mouseX, double mouseY, int button) {
         if (button != 0) return false;
-        // Reiter in der oberen Leiste
-        if (mouseY < NAV_H) {
-            int zx = zuX();
-            int zy = (NAV_H - ZU) / 2;
-            if (mouseX >= zx && mouseX <= zx + ZU && mouseY >= zy && mouseY <= zy + ZU) {
-                close();
+
+        int[] zu = zuFeld();
+        if (mouseX >= zu[0] && mouseX <= zu[0] + zu[2]
+                && mouseY >= zu[1] && mouseY <= zu[1] + zu[3]) {
+            close();
+            return true;
+        }
+
+        List<Nav> nav = navEintraege();
+        for (int i = 0; i < nav.size(); i++) {
+            int ny = navY(i);
+            if (mouseX >= panelX() + 8 && mouseX <= panelX() + leisteW() - 8
+                    && mouseY >= ny && mouseY <= ny + navH()) {
+                if (nav.get(i).tun() != null) nav.get(i).tun().run();
                 return true;
             }
-            for (int i = 0; i < REITER.length; i++) {
-                int rx = reiterX(i);
-                int rw = reiterBreite(i);
-                if (mouseX >= rx - 6 && mouseX <= rx + rw + 6) {
-                    reiter = i;
-                    scroll = 0;
-                    filter();
-                    return true;
-                }
-            }
-            return false;
         }
+
+        for (int i = 0; i < REITER.length; i++) {
+            int bx = pilleX(i);
+            if (mouseX >= bx && mouseX <= bx + pilleB(i)
+                    && mouseY >= pilleY() && mouseY <= pilleY() + pilleH()) {
+                reiter = i;
+                scroll = 0;
+                filter();
+                return true;
+            }
+        }
+
         if (mouseY < gridTop()) return false;
-        int cols = columns();
-        int cw = cardW();
+        int cols = spalten();
+        int cw = kartenB();
         for (int i = 0; i < shown.size(); i++) {
-            int cx = PAD + (i % cols) * (cw + GAP);
-            int cy = gridTop() + (i / cols) * (CARD_H + GAP) - scroll;
-            if (mouseX >= cx && mouseX <= cx + cw && mouseY >= cy && mouseY <= cy + CARD_H) {
+            int cx = inhaltX() + (i % cols) * (cw + kartenAbstand());
+            int cy = gridTop() + (i / cols) * zeilenAbstand() - scroll;
+            if (mouseX >= cx && mouseX <= cx + cw && mouseY >= cy && mouseY <= cy + kartenH()) {
                 VModule m = shown.get(i);
                 if (m.action != null) {
                     m.action.run();
                 } else if (m.settings.isEmpty() && m.setEnabled != null) {
-                    // Kachel ohne Unterpunkte schaltet direkt um
                     m.setEnabled.accept(!m.enabled.getAsBoolean());
                 } else {
                     MinecraftClient.getInstance().setScreen(new ModuleDetailScreen(this, m));
@@ -201,98 +296,173 @@ public class VisualHomeScreen extends VMouseScreen {
         return false;
     }
 
+    /** Einmal fehlgeschlagen heisst: nicht jeden Frame erneut versuchen. */
+    private boolean panoramaAus = false;
+
     /**
-     * Eigener Hintergrund statt {@code super.renderBackground} — das würde seit
-     * 1.20.5 den Weichzeichner über das Spiel legen.
+     * Hintergrund wie in der Vorlage: Spiel beziehungsweise Panorama bleiben
+     * sichtbar und werden weichgezeichnet, darueber schwebt das Panel. Frueher
+     * lag hier eine deckende Flaeche ueber dem ganzen Bildschirm.
      */
     @Override
     public void renderBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        ctx.fill(0, 0, width, height, VStyle.BG);
+        MinecraftClient mc = MinecraftClient.getInstance();
+        boolean gezeichnet = false;
+        if (mc.world == null && !panoramaAus) {
+            try {
+                renderPanoramaBackground(ctx, delta);
+                gezeichnet = true;
+            } catch (Throwable t) {
+                panoramaAus = true;
+            }
+        }
+        if (mc.world == null && !gezeichnet) {
+            ctx.fillGradient(0, 0, width, height, 0xFF0E1419, 0xFF11171C);
+        }
+        try {
+            weichzeichnen(ctx);
+        } catch (Throwable t) {
+            // Ohne Weichzeichner reicht der Schleier
+        }
+        ctx.fill(0, 0, width, height, 0x66060A0E);
     }
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         renderBackground(ctx, mouseX, mouseY, delta);
 
-        // Obere Leiste
-        ctx.fill(0, 0, width, NAV_H, VStyle.PANEL);
-        ctx.fill(0, NAV_H, width, NAV_H + 1, VStyle.BORDER);
+        int px = panelX();
+        int py = panelY();
+        int pw = panelW();
+        int ph = panelH();
 
-        // Wortmarke links
-        ctx.drawText(textRenderer, "VISUAL", PAD, NAV_H / 2 - 9, VStyle.TEXT, false);
-        ctx.drawText(textRenderer, "CLIENT", PAD, NAV_H / 2 + 1, VStyle.ACCENT, false);
+        VStyle.roundRect(ctx, px, py, pw, ph, VStyle.R_PANEL, 0xF00A0C10);
+        VStyle.roundOutline(ctx, px, py, pw, ph, VStyle.R_PANEL, 0x14FFFFFF);
+        int lw = leisteW();
+        ctx.fill(px + lw, py + 10, px + lw + 1, py + ph - 10, 0x14FFFFFF);
 
-        // Reiter mit Unterstreichung: aktiv breit, beim Überfahren halb
-        int beschriftungY = NAV_H / 2 - 4;
+        seitenleiste(ctx, mouseX, mouseY);
+
+        VFont.zeichne(ctx, textRenderer, VText.t("ui.modules"), inhaltX(),
+                py + Math.round(height * 0.042f), VStyle.TEXT);
+
         for (int i = 0; i < REITER.length; i++) {
-            int rx = reiterX(i);
-            int rw = reiterBreite(i);
+            int bx = pilleX(i);
+            int bw = pilleB(i);
             boolean aktiv = i == reiter;
-            boolean hover = mouseY < NAV_H && mouseX >= rx - 6 && mouseX <= rx + rw + 6;
-            ctx.drawText(textRenderer, VText.t(REITER[i]), rx, beschriftungY,
-                    aktiv ? VStyle.TEXT : VStyle.TEXT_DIM, false);
-            int ul = aktiv ? UNDERLINE_ACTIVE : hover ? UNDERLINE_HOVER : 0;
-            if (ul > 0) {
-                int ux = rx + (rw - ul) / 2;
-                VStyle.roundRect(ctx, ux, beschriftungY + 13, ul, 2, 1,
-                        aktiv ? VStyle.ACCENT : VStyle.TEXT_DIM);
+            boolean hover = mouseX >= bx && mouseX <= bx + bw
+                    && mouseY >= pilleY() && mouseY <= pilleY() + pilleH();
+            VStyle.roundRect(ctx, bx, pilleY(), bw, pilleH(), pilleH() / 2,
+                    aktiv ? VStyle.ACCENT : hover ? 0x1AFFFFFF : 0x0CFFFFFF);
+            if (!aktiv) {
+                VStyle.roundOutline(ctx, bx, pilleY(), bw, pilleH(), pilleH() / 2, 0x1AFFFFFF);
             }
+            VFont.zeichneMittig(ctx, textRenderer, VText.t(REITER[i]), bx + bw / 2,
+                    pilleY() + (pilleH() - 8) / 2, aktiv ? 0xFFFFFFFF : VStyle.TEXT_DIM);
         }
 
-        // Suchfeld-Fläche rechts, daneben das Kreuz zum Verlassen
-        VStyle.roundRect(ctx, sucheX(), (NAV_H - 26) / 2, 198, 26,
-                VStyle.R_CARD, VStyle.CARD);
-        int zx = zuX();
-        int zy = (NAV_H - ZU) / 2;
-        boolean zuHover = mouseX >= zx && mouseX <= zx + ZU && mouseY >= zy && mouseY <= zy + ZU;
-        VStyle.roundRect(ctx, zx, zy, ZU, ZU, VStyle.R_SMALL,
-                zuHover ? VStyle.GHOST_HOVER : VStyle.CARD);
-        ctx.drawCenteredTextWithShadow(textRenderer, "✕", zx + ZU / 2, zy + (ZU - 8) / 2,
-                zuHover ? VStyle.TEXT : VStyle.TEXT_DIM);
-
-        // Zähler unter der Leiste
-        ctx.drawText(textRenderer, VText.t("ui.count", shown.size(), modules.size()),
-                PAD, NAV_H + 6, VStyle.TEXT_FAINT, false);
-
-        // Kacheln
-        int cols = columns();
-        int cw = cardW();
+        ctx.enableScissor(inhaltX(), gridTop(), inhaltX() + inhaltW(), py + ph - 6);
+        int cols = spalten();
+        int cw = kartenB();
         for (int i = 0; i < shown.size(); i++) {
-            int cx = PAD + (i % cols) * (cw + GAP);
-            int cy = gridTop() + (i / cols) * (CARD_H + GAP) - scroll;
-            if (cy + CARD_H < gridTop() || cy > height) continue;
+            int cx = inhaltX() + (i % cols) * (cw + kartenAbstand());
+            int cy = gridTop() + (i / cols) * zeilenAbstand() - scroll;
+            if (cy + kartenH() < gridTop() || cy > py + ph) continue;
             drawCard(ctx, shown.get(i), cx, cy, cw, mouseX, mouseY);
         }
+        ctx.disableScissor();
 
-        // Suchfeld über allem
+        int sx = sucheLinks();
+        int[] zu = zuFeld();
+        VStyle.roundRect(ctx, sx, zu[1], sucheB(), zu[3], VStyle.R_SMALL, 0x14FFFFFF);
+        boolean zuHover = mouseX >= zu[0] && mouseX <= zu[0] + zu[2]
+                && mouseY >= zu[1] && mouseY <= zu[1] + zu[3];
+        VStyle.roundRect(ctx, zu[0], zu[1], zu[2], zu[3], VStyle.R_SMALL,
+                zuHover ? 0x33FF5555 : 0x14FFFFFF);
+        VFont.zeichneMittig(ctx, textRenderer, "\u2715", zu[0] + zu[2] / 2,
+                zu[1] + (zu[3] - 8) / 2, zuHover ? 0xFFFF8888 : VStyle.TEXT_DIM);
+
+        search.setX(sx + 8);
+        search.setY(zu[1] + (zu[3] - 10) / 2);
+        search.setWidth(sucheB() - 16);
         search.render(ctx, mouseX, mouseY, delta);
         super.render(ctx, mouseX, mouseY, delta);
     }
 
+    private void seitenleiste(DrawContext ctx, int mouseX, int mouseY) {
+        int px = panelX();
+        int lw = leisteW();
+
+        VFont.zeichne(ctx, textRenderer, "VISUAL", px + 14,
+                panelY() + Math.round(height * 0.042f), VStyle.TEXT);
+        int w = VFont.breite(textRenderer, "VISUAL ");
+        VFont.zeichne(ctx, textRenderer, "CLIENT", px + 14 + w,
+                panelY() + Math.round(height * 0.042f), VStyle.ACCENT);
+
+        List<Nav> nav = navEintraege();
+        for (int i = 0; i < nav.size(); i++) {
+            Nav n = nav.get(i);
+            int ny = navY(i);
+            boolean aktiv = n.tun() == null;
+            boolean hover = !aktiv && mouseX >= px + 8 && mouseX <= px + lw - 8
+                    && mouseY >= ny && mouseY <= ny + navH();
+            if (aktiv || hover) {
+                VStyle.roundRect(ctx, px + 8, ny, lw - 16, navH(), VStyle.R_SMALL,
+                        aktiv ? VStyle.ACCENT : 0x14FFFFFF);
+            }
+            int farbe = aktiv ? 0xFFFFFFFF : hover ? VStyle.TEXT : VStyle.TEXT_DIM;
+            VFont.zeichne(ctx, textRenderer, n.symbol(), px + 16, ny + (navH() - 8) / 2, farbe);
+            VFont.zeichne(ctx, textRenderer, VText.t(n.schluessel()), px + 30,
+                    ny + (navH() - 8) / 2, farbe);
+        }
+
+        String name = MinecraftClient.getInstance().getSession().getUsername();
+        int fy = panelY() + panelH() - Math.round(height * 0.055f);
+        VStyle.roundRect(ctx, px + 14, fy, 14, 14, 4, VStyle.ACCENT_DIM);
+        VFont.zeichneMittig(ctx, textRenderer,
+                name.isEmpty() ? "?" : name.substring(0, 1).toUpperCase(), px + 21, fy + 3,
+                0xFFFFFFFF);
+        VFont.zeichne(ctx, textRenderer, name, px + 34, fy + 1, VStyle.TEXT);
+        VFont.zeichne(ctx, textRenderer,
+                "Fabric " + MinecraftClient.getInstance().getGameVersion(),
+                px + 34, fy + 10, VStyle.TEXT_FAINT);
+    }
+
+    /**
+     * Karte im Aufbau der Vorlage: grosses Symbol mittig im dunklen Teil,
+     * darunter ein Fussbalken mit dem Namen. Der Balken ist im Akzent, wenn
+     * das Modul an ist, sonst grau - so sieht man den Zustand aus der
+     * Entfernung, ohne die Beschriftung lesen zu muessen.
+     */
     private void drawCard(DrawContext ctx, VModule m, int x, int y, int w,
                           int mouseX, int mouseY) {
-        boolean hover = mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + CARD_H;
+        int kopf = kartenKopfH();
+        int balken = balkenH();
+        int h = kopf + balken;
+        boolean hover = mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + h;
         boolean on = m.enabled != null && m.enabled.getAsBoolean();
-        VStyle.card(ctx, x, y, w, CARD_H, hover);
-        // Aktiv wird durch das Symbolfeld angezeigt, nicht durch einen
-        // leuchtenden Rahmen — ruhiger und leichter zu lesen.
 
-        // Symbolfeld: gefüllt im Akzent, wenn das Modul an ist
-        VStyle.roundRect(ctx, x + 8, y + 11, 32, 32, VStyle.R_CARD,
-                on ? VStyle.ACCENT : 0x14FFFFFF);
-        ctx.drawCenteredTextWithShadow(textRenderer, m.icon, x + 24, y + 22,
-                on ? 0xFF0B1416 : VStyle.TEXT_DIM);
+        VStyle.roundRect(ctx, x, y, w, h, VStyle.R_SMALL, hover ? 0x26FFFFFF : 0x12FFFFFF);
+        VStyle.roundOutline(ctx, x, y, w, h, VStyle.R_SMALL, hover ? 0x33FFFFFF : 0x14FFFFFF);
 
-        ctx.drawText(textRenderer, m.title, x + 48, y + 12, VStyle.TEXT, false);
-        String desc = trim(m.description, w - 62);
-        ctx.drawText(textRenderer, desc, x + 48, y + 26, VStyle.TEXT_FAINT, false);
+        skalieren(ctx, x + w / 2f, y + kopf / 2f - 8, 2.0f);
+        try {
+            VFont.zeichneMittig(ctx, textRenderer, m.icon, 0, 0,
+                    on ? VStyle.TEXT : VStyle.TEXT_DIM);
+        } finally {
+            zurueckskalieren(ctx);
+        }
 
-        String state = m.enabled == null
-                ? VText.t(m.action != null ? "ui.open" : "ui.configure")
-                : VText.t(on ? "ui.on" : "ui.offstate");
-        int sw = textRenderer.getWidth(state);
-        ctx.drawText(textRenderer, state, x + w - sw - 8, y + CARD_H - 14,
-                on ? VStyle.ACCENT : VStyle.TEXT_FAINT, false);
+        int by = y + kopf;
+        // Aus heisst dunkler Balken mit heller Schrift, nicht heller Balken
+        // mit blasser Schrift - so bleibt der Name in beiden Zustaenden
+        // lesbar und der Unterschied trotzdem auf einen Blick sichtbar.
+        int balkenFarbe = on ? VStyle.ACCENT : 0x66000000;
+        VStyle.roundRect(ctx, x, by, w, balken, VStyle.R_XS, balkenFarbe);
+        // Obere Ecken wieder eckig, sonst schwebt der Balken neben dem Kopf
+        ctx.fill(x, by, x + w, by + VStyle.R_XS, balkenFarbe);
+        VFont.zeichneMittig(ctx, textRenderer, trim(m.title, w - 10), x + w / 2,
+                by + (balken - 8) / 2, on ? 0xFFFFFFFF : VStyle.TEXT);
     }
 
     private String trim(String text, int maxWidth) {
