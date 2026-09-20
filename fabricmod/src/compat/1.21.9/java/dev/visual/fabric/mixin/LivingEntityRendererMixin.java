@@ -34,16 +34,15 @@ public abstract class LivingEntityRendererMixin {
         matrizen.push();
         try {
             MiniMe.platzieren(matrizen, zustand.bodyYaw);
-            MiniMe.anziehen(zustand);
-            // Roher Typ mit Absicht: mit ? statt Typvariable lehnt der
-            // Compiler den Zustand ab, obwohl es derselbe ist.
-            @SuppressWarnings("rawtypes")
-            LivingEntityRenderer roh = (LivingEntityRenderer) (Object) this;
-            roh.render(zustand, matrizen, schlange, kamera);
+            // Eigene Puppe statt eines zweiten Durchlaufs desselben
+            // Renderers: seit 1.21.9 wird erst am Bildende gezeichnet, und
+            // dann haetten beide Einreichungen dieselbe Pose.
+            if (zustand instanceof net.minecraft.client.render.entity.state.PlayerEntityRenderState p) {
+                dev.visual.fabric.ui.MiniPuppe.zeichnen(p, matrizen, schlange, zustand.light);
+            }
         } catch (Throwable t) {
             // Ein Fehler hier wuerde jeden Frame kommen - lieber ohne Mini
         } finally {
-            MiniMe.ausziehen(zustand);
             matrizen.pop();
             MiniMe.beenden();
         }
