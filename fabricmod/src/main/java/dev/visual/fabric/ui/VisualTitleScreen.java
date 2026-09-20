@@ -200,8 +200,8 @@ public class VisualTitleScreen extends VMouseScreen {
             int x = 0;
             for (int i = 0; i < wort.length(); i++) {
                 String z = String.valueOf(wort.charAt(i));
-                ctx.drawText(textRenderer, z, x, 0, VStyle.TEXT, false);
-                x += textRenderer.getWidth(z) + WORT_SPERRE;
+                ctx.drawText(textRenderer, VFont.t(z), x, 0, VStyle.TEXT, false);
+                x += VFont.breite(textRenderer, z) + WORT_SPERRE;
             }
         } finally {
             zurueckskalieren(ctx);
@@ -211,17 +211,17 @@ public class VisualTitleScreen extends VMouseScreen {
     private void spaltenKoepfe(DrawContext ctx) {
         int my = height / 2 - 6;
         if (!server.isEmpty()) {
-            ctx.drawText(textRenderer, VText.t("ui.quickstart"), RAND, my - 14, VStyle.TEXT_DIM, false);
+            ctx.drawText(textRenderer, VFont.t(VText.t("ui.quickstart")), RAND, my - 14, VStyle.TEXT_DIM, false);
         }
     }
 
     private void fusszeile(DrawContext ctx) {
         int y = height - 20;
-        ctx.drawText(textRenderer, "VISUAL", RAND, y, VStyle.TEXT_DIM, false);
-        int w = textRenderer.getWidth("VISUAL ");
-        ctx.drawText(textRenderer, "CLIENT", RAND + w, y, VStyle.ACCENT, false);
+        ctx.drawText(textRenderer, VFont.t("VISUAL"), RAND, y, VStyle.TEXT_DIM, false);
+        int w = VFont.breite(textRenderer, "VISUAL ");
+        ctx.drawText(textRenderer, VFont.t("CLIENT"), RAND + w, y, VStyle.ACCENT, false);
         String v = "Fabric " + MinecraftClient.getInstance().getGameVersion();
-        ctx.drawText(textRenderer, v, RAND + w + textRenderer.getWidth("CLIENT ") + 8, y,
+        ctx.drawText(textRenderer, VFont.t(v), RAND + w + VFont.breite(textRenderer, "CLIENT ") + 8, y,
                 VStyle.TEXT_FAINT, false);
     }
 
@@ -252,8 +252,8 @@ public class VisualTitleScreen extends VMouseScreen {
                 && mouseY >= c[1] && mouseY <= c[1] + c[3];
         glas(ctx, c[0], c[1], c[2], c[3], hover || kontenOffen);
         avatar(ctx, c[0] + 4, c[1] + 4, 18, name);
-        ctx.drawText(textRenderer, name, c[0] + 28, c[1] + 9, VStyle.TEXT, false);
-        ctx.drawText(textRenderer, kontenOffen ? "▴" : "▾", c[0] + c[2] - 14,
+        ctx.drawText(textRenderer, VFont.t(name), c[0] + 28, c[1] + 9, VStyle.TEXT, false);
+        ctx.drawText(textRenderer, VFont.t(kontenOffen ? "▴" : "▾"), c[0] + c[2] - 14,
                 c[1] + 9, VStyle.TEXT_DIM, false);
     }
 
@@ -261,7 +261,7 @@ public class VisualTitleScreen extends VMouseScreen {
     private void avatar(DrawContext ctx, int x, int y, int g, String name) {
         VStyle.roundRect(ctx, x, y, g, g, VStyle.R_XS, farbeAus(name));
         String b = name.isEmpty() ? "?" : name.substring(0, 1).toUpperCase();
-        ctx.drawText(textRenderer, b, x + (g - textRenderer.getWidth(b)) / 2,
+        ctx.drawText(textRenderer, VFont.t(b), x + (g - VFont.breite(textRenderer, b)) / 2,
                 y + (g - 8) / 2, 0xFFFFFFFF, false);
     }
 
@@ -281,7 +281,7 @@ public class VisualTitleScreen extends VMouseScreen {
         int[] m = listeMasse();
         int h = 22 + Math.max(1, liste.size()) * ZEILE_H + 20;
         VStyle.panel(ctx, m[0], m[1], m[2], h);
-        ctx.drawText(textRenderer, VText.t("ui.switchaccount"), m[0] + 12, m[1] + 8, VStyle.TEXT_DIM, false);
+        ctx.drawText(textRenderer, VFont.t(VText.t("ui.switchaccount")), m[0] + 12, m[1] + 8, VStyle.TEXT_DIM, false);
 
         String aktiv = AccountStore.aktivId();
         for (int i = 0; i < liste.size(); i++) {
@@ -294,13 +294,13 @@ public class VisualTitleScreen extends VMouseScreen {
                         VStyle.concentric(VStyle.R_PANEL, 6), VStyle.GHOST_HOVER);
             }
             avatar(ctx, m[0] + 12, ky + 3, 18, k.name());
-            ctx.drawText(textRenderer, k.name(), m[0] + 36, ky + 8,
+            ctx.drawText(textRenderer, VFont.t(k.name()), m[0] + 36, ky + 8,
                     k.id().equals(aktiv) ? VStyle.TEXT : VStyle.TEXT_DIM, false);
             if (k.id().equals(aktiv)) {
-                ctx.drawText(textRenderer, "●", m[0] + m[2] - 20, ky + 8, VStyle.ACCENT, false);
+                ctx.drawText(textRenderer, VFont.t("●"), m[0] + m[2] - 20, ky + 8, VStyle.ACCENT, false);
             }
         }
-        ctx.drawText(textRenderer, VText.t("ui.nextstart"), m[0] + 12, m[1] + h - 14,
+        ctx.drawText(textRenderer, VFont.t(VText.t("ui.nextstart")), m[0] + 12, m[1] + h - 14,
                 VStyle.TEXT_FAINT, false);
     }
 
@@ -328,28 +328,28 @@ public class VisualTitleScreen extends VMouseScreen {
         if (f.symbol() != null) {
             // Mittelspalten-Knopf: Symbol und Beschriftung zusammen mittig
             String s = f.symbol() + "  " + f.titel();
-            int tw = textRenderer.getWidth(s);
-            ctx.drawText(textRenderer, s, f.x() + (f.w() - tw) / 2, f.y() + (f.h() - 8) / 2,
+            int tw = VFont.breite(textRenderer, s);
+            ctx.drawText(textRenderer, VFont.t(s), f.x() + (f.w() - tw) / 2, f.y() + (f.h() - 8) / 2,
                     hover ? VStyle.TEXT : VStyle.TEXT_DIM, false);
         } else {
             // Serverzeile: Bild links, Name oben, Spielerzahl darunter
             avatar(ctx, f.x() + 5, f.y() + 5, 18, f.titel());
-            ctx.drawText(textRenderer, kuerzen(f.titel(), f.w() - 60), f.x() + 29, f.y() + 5,
+            ctx.drawText(textRenderer, VFont.t(kuerzen(f.titel(), f.w() - 60)), f.x() + 29, f.y() + 5,
                     VStyle.TEXT, false);
             if (f.unter() != null) {
-                ctx.drawText(textRenderer, kuerzen(f.unter(), f.w() - 60), f.x() + 29,
+                ctx.drawText(textRenderer, VFont.t(kuerzen(f.unter(), f.w() - 60)), f.x() + 29,
                         f.y() + 16, VStyle.TEXT_FAINT, false);
             }
-            ctx.drawText(textRenderer, "›", f.x() + f.w() - 14, f.y() + 9,
+            ctx.drawText(textRenderer, VFont.t("›"), f.x() + f.w() - 14, f.y() + 9,
                     VStyle.TEXT_DIM, false);
         }
     }
 
     private String kuerzen(String text, int maxBreite) {
-        if (textRenderer.getWidth(text) <= maxBreite) return text;
+        if (VFont.breite(textRenderer, text) <= maxBreite) return text;
         StringBuilder sb = new StringBuilder();
         for (char c : text.toCharArray()) {
-            if (textRenderer.getWidth(sb.toString() + c + "…") > maxBreite) break;
+            if (VFont.breite(textRenderer, sb.toString() + c + "…") > maxBreite) break;
             sb.append(c);
         }
         return sb + "…";
