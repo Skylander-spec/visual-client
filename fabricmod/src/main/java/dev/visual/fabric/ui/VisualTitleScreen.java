@@ -39,6 +39,9 @@ public class VisualTitleScreen extends VMouseScreen {
      * greifen kann. Dann bleibt dieser Bildschirm hier.
      */
     public static net.minecraft.client.gui.screen.Screen oeffnen() {
+        if (!VConfig.get().composeUi) {
+            return new VisualTitleScreen();
+        }
         try {
             return (net.minecraft.client.gui.screen.Screen)
                     Class.forName("dev.visual.fabric.ui.VTitleScreen")

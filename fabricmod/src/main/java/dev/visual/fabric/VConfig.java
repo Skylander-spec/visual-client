@@ -33,6 +33,17 @@ public class VConfig {
     public boolean customTitle = true;
 
     /**
+     * Die von OneConfig gezeichneten Bildschirme (Start und Cosmetics).
+     *
+     * Standard aus. Sie sind gebaut und uebersetzen, aber ungeprueft im
+     * Spiel - und ein ungeprueftes Stueck gehoert nicht auf den
+     * Startbildschirm, denn wenn es dort klemmt, ist der ganze Client
+     * unbenutzbar. Genau das ist einmal passiert. Wer sie sehen will,
+     * schaltet sie hier an.
+     */
+    public boolean composeUi = false;
+
+    /**
      * Minecrafts drehendes Panorama hinter dem Startbildschirm.
      *
      * Standard aus: das Vanilla-Panorama ist genau das, wonach ein

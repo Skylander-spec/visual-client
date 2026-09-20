@@ -1,5 +1,6 @@
 package dev.visual.fabric.ui;
 
+import dev.visual.fabric.VConfig;
 import dev.visual.fabric.CapeManager;
 import dev.visual.fabric.Compat;
 import net.minecraft.client.MinecraftClient;
@@ -43,6 +44,9 @@ public class VisualCosmeticsScreen extends VMouseScreen {
      * garantiert in den try-Block.
      */
     public static net.minecraft.client.gui.screen.Screen oeffnen() {
+        if (!VConfig.get().composeUi) {
+            return new VisualCosmeticsScreen();
+        }
         try {
             return (net.minecraft.client.gui.screen.Screen)
                     Class.forName("dev.visual.fabric.ui.VCosmeticsScreen")
