@@ -4,8 +4,6 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.util.Window;
 
-import java.lang.reflect.Method;
-
 /**
  * Haelt unsere eigenen Bildschirme auf einer festen Arbeitsflaeche.
  *
@@ -14,7 +12,7 @@ import java.lang.reflect.Method;
  * hin, bei Stufe 1 schwimmen die Kacheln in 1920 Pixeln Leere. Darum rechnen
  * wir uns beim Oeffnen eine eigene Stufe aus — die groesste, bei der noch
  * mindestens {@link #MIN_B}x{@link #MIN_H} uebrig bleiben — und geben die
- * Vanilla-Stufe beim Schliessen unveraendert zurueck.
+ * Vanilla-Stufe beim Schliessen zurueck.
  */
 public final class VScale {
     /** So viel Platz braucht unser Layout mindestens. */
@@ -23,6 +21,8 @@ public final class VScale {
 
     /** Laeuft gerade einer unserer Bildschirme mit eigener Stufe? */
     private static boolean entliehen = false;
+    /** Einmal schiefgegangen heisst: nicht bei jedem Bildschirm neu klagen. */
+    private static boolean gemeldet = false;
 
     private VScale() {
     }
@@ -37,7 +37,7 @@ public final class VScale {
             bildschirm.width = fenster.getScaledWidth();
             bildschirm.height = fenster.getScaledHeight();
         } catch (Throwable t) {
-            // Lieber schief skaliert als gar kein Bildschirm.
+            klagen(t);
         }
     }
 
@@ -53,7 +53,7 @@ public final class VScale {
                     mc.options.getGuiScale().getValue(), mc.forcesUnicodeFont());
             if (faktor(fenster) != zurueck) setzen(fenster, zurueck);
         } catch (Throwable t) {
-            // s.o.
+            klagen(t);
         } finally {
             entliehen = false;
         }
@@ -68,19 +68,23 @@ public final class VScale {
         return f;
     }
 
-    // setScaleFactor/getScaleFactor nehmen bis 1.21.5 ein double, ab 1.21.6 ein
-    // int. Ein Reflex-Aufruf spart uns fuenf Kopien dieser Klasse.
+    // getScaleFactor liefert bis 1.21.5 ein double, ab 1.21.6 ein int; bei
+    // setScaleFactor ist es umgekehrt. Beides schluckt der Java-Compiler ohne
+    // Fallunterscheidung: der Cast passt auf beides, und ein int weitet sich
+    // von allein zum double. (Reflection waere hier falsch — die Namen werden
+    // zur Laufzeit remappt, getMethod("getScaleFactor") findet nichts.)
 
-    private static int faktor(Window fenster) throws Exception {
-        Method m = Window.class.getMethod("getScaleFactor");
-        return ((Number) m.invoke(fenster)).intValue();
+    private static int faktor(Window fenster) {
+        return (int) fenster.getScaleFactor();
     }
 
-    private static void setzen(Window fenster, int wert) throws Exception {
-        try {
-            Window.class.getMethod("setScaleFactor", int.class).invoke(fenster, wert);
-        } catch (NoSuchMethodException alt) {
-            Window.class.getMethod("setScaleFactor", double.class).invoke(fenster, (double) wert);
-        }
+    private static void setzen(Window fenster, int wert) {
+        fenster.setScaleFactor(wert);
+    }
+
+    private static void klagen(Throwable t) {
+        if (gemeldet) return;
+        gemeldet = true;
+        System.err.println("[visualsfabric] Feste UI-Groesse nicht moeglich: " + t);
     }
 }
