@@ -142,7 +142,7 @@ class VTitleScreen : ComposeScreen() {
     private fun Schnellstart() {
         val theme = LocalTheme.current
         Text(
-            "Schnellstart",
+            VText.t("ui.quickstart"),
             color = theme.textColorSecondary,
             fontSize = 12.sp,
             modifier = Modifier.padding(bottom = 2.dp)
@@ -162,16 +162,16 @@ class VTitleScreen : ComposeScreen() {
 
     @Composable
     private fun Mitte() {
-        Karte("profiles", "Einzelspieler", null) {
+        Karte("profiles", VText.t("ui.singleplayer"), null) {
             mc.setScreen(SelectWorldScreen(mc.currentScreen))
         }
-        Karte("cloud", "Mehrspieler", null) {
+        Karte("cloud", VText.t("ui.multiplayer"), null) {
             mc.setScreen(MultiplayerScreen(mc.currentScreen))
         }
-        Karte("settings", "Optionen", null) {
+        Karte("settings", VText.t("ui.options"), null) {
             mc.setScreen(OptionsScreen(mc.currentScreen, mc.options))
         }
-        Karte("layers", "Module", null) {
+        Karte("layers", VText.t("ui.modules"), null) {
             mc.setScreen(VisualHomeScreen())
         }
     }
@@ -179,10 +179,10 @@ class VTitleScreen : ComposeScreen() {
     @Composable
     private fun Rechts() {
         Karte("profiles", mc.session.username, null) { }
-        Karte("star", "Cosmetics", null) {
+        Karte("star", VText.t("ui.cosmetics"), null) {
             mc.setScreen(VisualCosmeticsScreen.oeffnen())
         }
-        Karte("close", "Beenden", null) { mc.scheduleStop() }
+        Karte("close", VText.t("ui.quit"), null) { mc.scheduleStop() }
     }
 
     /**

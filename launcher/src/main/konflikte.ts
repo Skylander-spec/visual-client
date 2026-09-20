@@ -143,6 +143,17 @@ export interface Konflikt {
  */
 const BEKANNT_UNVERTRAEGLICH: { a: string; b: string; opfer: string; grund: string }[] = [
   {
+    a: 'fastquit',
+    b: 'xaerolib',
+    opfer: 'fastquit',
+    grund:
+      'fastquit laesst eine verlassene Welt im Hintergrund weiterspeichern. ' +
+      'Oeffnet man in der Zeit die naechste, laufen zwei Server, und XaeroLib ' +
+      'wirft "Multiple servers running at once is not supported!" - Minecraft ' +
+      'stirbt beim Betreten. Geopfert wird fastquit, weil Xaeros Karte das ' +
+      'wichtigere Stueck ist.'
+  },
+  {
     a: 'animatium',
     b: 'viewmodel',
     opfer: 'animatium',

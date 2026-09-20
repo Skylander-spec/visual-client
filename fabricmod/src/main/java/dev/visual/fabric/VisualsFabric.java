@@ -106,10 +106,26 @@ public class VisualsFabric implements ClientModInitializer {
             client.setScreen(null);
         } else if (client.currentScreen == null
                 || client.currentScreen instanceof TitleScreen
-                || client.currentScreen instanceof dev.visual.fabric.ui.VisualTitleScreen
-                || client.currentScreen instanceof GameMenuScreen) {
+                || client.currentScreen instanceof GameMenuScreen
+                || istUnserTitel(client.currentScreen)) {
             client.setScreen(new dev.visual.fabric.ui.VisualHomeScreen());
         }
+    }
+
+    /**
+     * Ist das einer unserer Startbildschirme?
+     *
+     * Ueber den Klassennamen statt instanceof: VTitleScreen erbt von
+     * OneConfig und ist ohne OneConfig gar nicht ladbar - ein
+     * instanceof darauf wuerde schon beim Pruefen dieser Methode
+     * scheitern. Vorher stand hier nur VisualTitleScreen, und mit dem
+     * von OneConfig gezeichneten Bildschirm ging Rechts-Shift deshalb
+     * ins Leere.
+     */
+    private static boolean istUnserTitel(net.minecraft.client.gui.screen.Screen s) {
+        String k = s.getClass().getName();
+        return k.equals("dev.visual.fabric.ui.VisualTitleScreen")
+                || k.equals("dev.visual.fabric.ui.VTitleScreen");
     }
 
     private double savedGamma = -1;
