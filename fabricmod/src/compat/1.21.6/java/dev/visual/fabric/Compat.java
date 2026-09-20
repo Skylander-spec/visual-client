@@ -101,4 +101,31 @@ public final class Compat {
                                    Object vorher) {
         if (vorher instanceof net.minecraft.client.util.SkinTextures s) state.skinTextures = s;
     }
+
+    /**
+     * Skin-Textur des eigenen Spielers, auch ohne Welt. Im Spiel direkt vom
+     * Spieler, auf dem Startbildschirm ueber den Skin-Dienst - der Abruf
+     * laeuft nebenher, bis er fertig ist liefert die Methode null.
+     */
+    private static java.util.concurrent.CompletableFuture<java.util.Optional<net.minecraft.client.util.SkinTextures>> hautAbruf;
+    private static Identifier hautGemerkt;
+
+    public static Identifier spielerHaut() {
+        try {
+            MinecraftClient mc = MinecraftClient.getInstance();
+            if (mc.player != null) return mc.player.getSkinTextures().texture();
+            if (hautGemerkt != null) return hautGemerkt;
+            if (hautAbruf == null) {
+                hautAbruf = mc.getSkinProvider().fetchSkinTextures(mc.getGameProfile());
+            }
+            if (hautAbruf.isDone()) {
+                java.util.Optional<net.minecraft.client.util.SkinTextures> o =
+                        hautAbruf.getNow(java.util.Optional.empty());
+                if (o.isPresent()) hautGemerkt = o.get().texture();
+            }
+            return hautGemerkt;
+        } catch (Throwable t) {
+            return null;
+        }
+    }
 }

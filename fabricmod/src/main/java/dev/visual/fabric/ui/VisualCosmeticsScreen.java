@@ -58,7 +58,6 @@ public class VisualCosmeticsScreen extends VMouseScreen {
     @Override
     protected void init() {
         super.init();
-        BlurGuard.off();
         umhaenge.clear();
         // Erster Eintrag ist immer der leere — sonst käme man nie wieder
         // zurück auf blank.
@@ -101,191 +100,96 @@ public class VisualCosmeticsScreen extends VMouseScreen {
     protected void setInitialFocus() {
     }
 
-    /**
-     * Breite der Rubrikenspalte. Bei kleiner Fensterbreite — etwa bei hoher
-     * GUI-Skalierung oder Minecrafts Standardfenster — faellt sie ganz weg,
-     * sonst bliebe fuer die Kacheln nichts uebrig.
-     */
-    private int railBreite() {
-        return width < 520 ? 0 : RAIL_MAX;
+    // -- Aufbau ---------------------------------------------------------
+    //
+    // Ein Ort fuer alles: links der Spiegel mit dem eigenen Avatar, rechts
+    // die Rubriken. Frueher lagen die Umhaenge hier und der Mini-Me in einer
+    // eigenen Modulseite - wer sich anziehen wollte, musste zwischen zwei
+    // Bildschirmen springen.
+
+    private static final String[] RUBRIKEN = {"ui.capes", "mod.minime"};
+    private int rubrik = 0;
+
+    /** Breite des Spiegels innerhalb des Inhaltsbereichs. */
+    private int spiegelB() {
+        return Math.round(VPanel.inhaltW(width) * 0.34f);
     }
 
-    /** Vorschauspalte, schrumpft mit und verschwindet erst ganz zum Schluss. */
-    private int vorschauBreite() {
-        if (width < 340) return 0;
-        if (width >= 560) return VORSCHAU_MAX;
-        return Math.max(VORSCHAU_MIN, width - 340 + VORSCHAU_MIN);
+    private int rechtsX() {
+        return VPanel.inhaltX(width) + spiegelB() + Math.round(width * 0.02f);
+    }
+
+    private int rechtsB() {
+        return VPanel.inhaltX(width) + VPanel.inhaltW(width) - rechtsX();
+    }
+
+    private int pilleX(int i) {
+        int x = rechtsX();
+        for (int k = 0; k < i; k++) x += pilleB(k) + 6;
+        return x;
+    }
+
+    private int pilleB(int i) {
+        return VFont.breite(textRenderer, VText.t(RUBRIKEN[i])) + 18;
+    }
+
+    private int pilleY() {
+        return VPanel.y(height) + Math.round(height * 0.105f);
+    }
+
+    private int pilleH() {
+        return Math.round(height * 0.0408f);
+    }
+
+    private int rasterOben() {
+        return VPanel.y(height) + Math.round(height * 0.148f);
     }
 
     private int spalten() {
-        int platz = width - railBreite() - vorschauBreite() - 3 * PAD;
-        return Math.max(1, (platz + LUECKE) / (KACHEL_W + LUECKE));
+        return 3;
     }
 
-    private int rasterX() {
-        return railBreite() + PAD;
+    private int kachelAbstand() {
+        return Math.max(4, Math.round(width * 0.0125f));
     }
 
-    private int rasterY() {
-        return NAV_H + 20;
+    private int kachelB() {
+        int a = kachelAbstand();
+        return (rechtsB() - (spalten() - 1) * a) / spalten();
     }
 
-    private int zuX() {
-        return width - PAD - ZU;
+    private int kachelH() {
+        return Math.round(height * 0.20f);
     }
 
-    private int vorschauX() {
-        return width - PAD - vorschauBreite();
+    private int zeilenAbstand() {
+        return kachelH() + Math.max(4, Math.round(height * 0.024f));
     }
 
-    private int vorschauH() {
-        return height - (NAV_H + 20) - PAD;
-    }
-
-    /** Oberkante des Anlegen-Knopfes — Zeichnen und Klick lesen beide hier. */
-    private int knopfY() {
-        return NAV_H + 20 + vorschauH() - 46;
-    }
-
-    @Override
-    public void renderBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        ctx.fill(0, 0, width, height, VStyle.BG);
-    }
-
-    @Override
-    public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        renderBackground(ctx, mouseX, mouseY, delta);
-
-        // Kopfleiste wie in der Modul-Übersicht
-        ctx.fill(0, 0, width, NAV_H, VStyle.PANEL);
-        ctx.fill(0, NAV_H, width, NAV_H + 1, VStyle.BORDER);
-        ctx.drawText(textRenderer, "VISUAL", PAD, NAV_H / 2 - 9, VStyle.TEXT, false);
-        ctx.drawText(textRenderer, "CLIENT", PAD, NAV_H / 2 + 1, VStyle.ACCENT, false);
-        ctx.drawText(textRenderer, VText.t("ui.wardrobe"), PAD + 70, NAV_H / 2 - 4,
-                VStyle.TEXT, false);
-
-        int zx = zuX();
-        int zy = (NAV_H - ZU) / 2;
-        boolean zuHover = mouseX >= zx && mouseX <= zx + ZU && mouseY >= zy && mouseY <= zy + ZU;
-        VStyle.roundRect(ctx, zx, zy, ZU, ZU, VStyle.R_SMALL,
-                zuHover ? VStyle.GHOST_HOVER : VStyle.CARD);
-        ctx.drawCenteredTextWithShadow(textRenderer, "✕", zx + ZU / 2, zy + (ZU - 8) / 2,
-                zuHover ? VStyle.TEXT : VStyle.TEXT_DIM);
-
-        // Linke Rubrikenspalte. Bisher gibt es nur Umhänge, aber die Spalte
-        // hält den Platz für das, was noch dazukommt.
-        int rail = railBreite();
-        if (rail > 0) {
-            ctx.fill(0, NAV_H + 1, rail, height, VStyle.PANEL);
-            ctx.fill(rail, NAV_H + 1, rail + 1, height, VStyle.BORDER);
-            VStyle.roundRect(ctx, 8, NAV_H + 12, rail - 16, 24, VStyle.R_SMALL,
-                    VStyle.ACCENT_BG);
-            ctx.drawText(textRenderer, VText.t("ui.capes"), 18, NAV_H + 20,
-                    VStyle.TEXT, false);
+    /** Die Einstellungen des Mini-Me, aus der Modulliste geholt. */
+    private List<VSetting> miniEinstellungen() {
+        for (VModule m : ModuleRegistry.all(this)) {
+            if (m.id.equals("minime")) return m.settings;
         }
-
-        zeichneRaster(ctx, mouseX, mouseY);
-        zeichneVorschau(ctx, mouseX, mouseY);
-        super.render(ctx, mouseX, mouseY, delta);
+        return List.of();
     }
 
-    private void zeichneRaster(DrawContext ctx, int mouseX, int mouseY) {
-        int cols = spalten();
-        int x0 = rasterX();
-        int y0 = rasterY();
-        for (int i = 0; i < umhaenge.size(); i++) {
-            int cx = x0 + (i % cols) * (KACHEL_W + LUECKE);
-            int cy = y0 + (i / cols) * (KACHEL_H + LUECKE) - scroll;
-            if (cy + KACHEL_H < y0 || cy > height) continue;
-
-            boolean hover = mouseX >= cx && mouseX <= cx + KACHEL_W
-                    && mouseY >= cy && mouseY <= cy + KACHEL_H;
-            boolean aktiv = i == gewaehlt;
-            VStyle.roundOutline(ctx, cx, cy, KACHEL_W, KACHEL_H, VStyle.R_CARD,
-                    aktiv ? VStyle.ACCENT : hover ? VStyle.BORDER_HI : VStyle.BORDER);
-            VStyle.roundRect(ctx, cx, cy, KACHEL_W, KACHEL_H, VStyle.R_CARD,
-                    hover || aktiv ? VStyle.CARD_HOVER : VStyle.CARD);
-
-            Umhang u = umhaenge.get(i);
-            zeichneTraeger(ctx, u, cx + 8, cy + 8, KACHEL_W - 16, KACHEL_H - 34, 34);
-
-            String name = u.name() == null ? VText.t("ui.nocape") : u.name();
-            name = textRenderer.trimToWidth(name, KACHEL_W - 12);
-            ctx.drawCenteredTextWithShadow(textRenderer, name, cx + KACHEL_W / 2,
-                    cy + KACHEL_H - 18, aktiv ? VStyle.ACCENT : VStyle.TEXT);
-        }
+    private int zeileY(int i) {
+        return rasterOben() + i * Math.round(height * 0.052f);
     }
 
-    private void zeichneVorschau(DrawContext ctx, int mouseX, int mouseY) {
-        if (vorschauBreite() <= 0) return;
-        int px = vorschauX();
-        int py = NAV_H + 20;
-        int ph = vorschauH();
-        VStyle.roundOutline(ctx, px, py, vorschauBreite(), ph, VStyle.R_PANEL, VStyle.BORDER);
-        VStyle.roundRect(ctx, px, py, vorschauBreite(), ph, VStyle.R_PANEL, VStyle.PANEL);
-
-        Umhang u = umhaenge.get(Math.min(gewaehlt, umhaenge.size() - 1));
-        zeichneTraeger(ctx, u, px + 20, py + 16, vorschauBreite() - 40, ph - 110, 62);
-
-        int ty = py + ph - 86;
-        String name = u.name() == null ? VText.t("ui.nocape") : u.name();
-        ctx.drawText(textRenderer, textRenderer.trimToWidth(name, vorschauBreite() - 32),
-                px + 16, ty, VStyle.TEXT, false);
-        boolean istAn = u.name() == null ? angelegt == null : u.name().equals(angelegt);
-
-        int bx = px + 16;
-        int by = knopfY();
-        int bw = vorschauBreite() - 32;
-        boolean hover = mouseX >= bx && mouseX <= bx + bw && mouseY >= by && mouseY <= by + 26;
-        VStyle.roundRect(ctx, bx, by, bw, 26, VStyle.R_SMALL,
-                istAn ? VStyle.GHOST_HOVER : hover ? VStyle.ACCENT_HOVER : VStyle.ACCENT);
-        ctx.drawCenteredTextWithShadow(textRenderer,
-                VText.t(istAn ? "ui.worn" : "ui.wear"), bx + bw / 2, by + 9,
-                istAn ? VStyle.TEXT_DIM : 0xFFFFFFFF);
-    }
-
-    /**
-     * Den eigenen Spieler mit diesem Umhang in ein Feld zeichnen. Ohne Welt
-     * gibt es keinen — dann die Textur selbst, damit die Kachel etwas zeigt.
-     */
-    private void zeichneTraeger(DrawContext ctx, Umhang u, int x, int y, int w, int h,
-                                int groesse) {
-        LivingEntity spieler = client == null ? null : client.player;
-        if (spieler == null) {
-            if (u.textur() != null) {
-                // Nur die Vorderseite zeigen. Sie liegt im 64x32-Blatt bei
-                // (1,1) und ist 10x16 gross - wer das ganze Blatt malt,
-                // bekommt ein winziges Bild mit Rueckseite und Raendern.
-                int bh = Math.min(h - 8, (w - 8) * 16 / 10);
-                int bw = bh * 10 / 16;
-                Compat.drawTexAusschnitt(ctx, u.textur(), x + (w - bw) / 2,
-                        y + (h - bh) / 2, bw, bh, 1f, 1f, 10, 16, 64, 32, 0xFFFFFFFF);
-            } else {
-                ctx.drawCenteredTextWithShadow(textRenderer, "—", x + w / 2, y + h / 2 - 4,
-                        VStyle.TEXT_FAINT);
-            }
-            return;
-        }
-        try {
-            CapeManager.vorschauSetzen(u.textur());
-            // Der Blickpunkt liegt weit über dem Feld: dadurch neigt sich die
-            // Figur nach vorn und der Umhang wird sichtbar, statt dass man nur
-            // auf die Vorderseite schaut.
-            InventoryScreen.drawEntity(ctx, x, y, x + w, y + h, groesse, 0.0f,
-                    x + w / 2f, y - 40f, spieler);
-        } catch (Throwable t) {
-            // Ein Fehler hier darf nicht den ganzen Bildschirm reißen
-        } finally {
-            CapeManager.vorschauLoeschen();
-        }
+    private int zeileH() {
+        return Math.round(height * 0.044f);
     }
 
     @Override
     protected boolean handleScroll(double amount) {
-        int cols = spalten();
-        int reihen = (umhaenge.size() + cols - 1) / cols;
-        int max = Math.max(0, reihen * (KACHEL_H + LUECKE) - (height - rasterY() - 16));
-        scroll = Math.max(0, Math.min(max, scroll - (int) (amount * 24)));
+        if (rubrik != 0) return false;
+        int reihen = (umhaenge.size() + spalten() - 1) / spalten();
+        int gesamt = reihen * zeilenAbstand();
+        int sichtbar = VPanel.y(height) + VPanel.h(height) - rasterOben() - 8;
+        scroll = Math.max(0, Math.min(Math.max(0, gesamt - sichtbar),
+                scroll - (int) (amount * 24)));
         return true;
     }
 
@@ -293,48 +197,264 @@ public class VisualCosmeticsScreen extends VMouseScreen {
     protected boolean handlePress(double mouseX, double mouseY, int button) {
         if (button != 0) return false;
 
-        if (mouseY < NAV_H) {
-            if (mouseX >= zuX() && mouseX <= zuX() + ZU) {
-                verlassen();
+        int[] zu = VPanel.zuFeld(width, height);
+        if (mouseX >= zu[0] && mouseX <= zu[0] + zu[2]
+                && mouseY >= zu[1] && mouseY <= zu[1] + zu[3]) {
+            close();
+            return true;
+        }
+
+        if (VPanel.navGeklickt(this, mouseX, mouseY, width, height)) return true;
+
+        for (int i = 0; i < RUBRIKEN.length; i++) {
+            int bx = pilleX(i);
+            if (mouseX >= bx && mouseX <= bx + pilleB(i)
+                    && mouseY >= pilleY() && mouseY <= pilleY() + pilleH()) {
+                rubrik = i;
+                scroll = 0;
                 return true;
+            }
+        }
+
+        if (rubrik == 0) {
+            int cols = spalten();
+            int cw = kachelB();
+            for (int i = 0; i < umhaenge.size(); i++) {
+                int cx = rechtsX() + (i % cols) * (cw + kachelAbstand());
+                int cy = rasterOben() + (i / cols) * zeilenAbstand() - scroll;
+                if (mouseX >= cx && mouseX <= cx + cw
+                        && mouseY >= cy && mouseY <= cy + kachelH()) {
+                    gewaehlt = i;
+                    anziehen(umhaenge.get(i));
+                    return true;
+                }
             }
             return false;
         }
 
-        int px = vorschauX();
-        int by = knopfY();
-        if (mouseX >= px + 16 && mouseX <= px + vorschauBreite() - 16
-                && mouseY >= by && mouseY <= by + 26) {
-            Umhang u = umhaenge.get(Math.min(gewaehlt, umhaenge.size() - 1));
-            CapeManager.anlegen(u.name());
-            angelegt = u.name();
-            return true;
-        }
-
-        int cols = spalten();
-        int x0 = rasterX();
-        int y0 = rasterY();
-        for (int i = 0; i < umhaenge.size(); i++) {
-            int cx = x0 + (i % cols) * (KACHEL_W + LUECKE);
-            int cy = y0 + (i / cols) * (KACHEL_H + LUECKE) - scroll;
-            if (mouseX >= cx && mouseX <= cx + KACHEL_W
-                    && mouseY >= cy && mouseY <= cy + KACHEL_H) {
-                gewaehlt = i;
-                return true;
+        List<VSetting> liste = miniEinstellungen();
+        for (int i = 0; i < liste.size(); i++) {
+            int zy = zeileY(i);
+            if (mouseY < zy || mouseY > zy + zeileH()) continue;
+            if (mouseX < rechtsX() || mouseX > rechtsX() + rechtsB()) continue;
+            VSetting s = liste.get(i);
+            int rechts = rechtsX() + rechtsB();
+            if (s instanceof VSetting.Toggle t) {
+                t.set.accept(!t.get.getAsBoolean());
+            } else if (s instanceof VSetting.Stepper st) {
+                if (mouseX >= rechts - 24) st.next.run();
+                else if (mouseX >= rechts - 120 && mouseX <= rechts - 96) st.prev.run();
+            } else if (s instanceof VSetting.Action a) {
+                a.run.run();
             }
+            return true;
         }
         return false;
     }
 
+    /** Einmal fehlgeschlagen heisst: nicht jeden Frame erneut versuchen. */
+    private boolean panoramaAus = false;
+
     @Override
-    public void close() {
-        verlassen();
+    public void renderBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        boolean gezeichnet = false;
+        if (mc.world == null && !panoramaAus) {
+            try {
+                renderPanoramaBackground(ctx, delta);
+                gezeichnet = true;
+            } catch (Throwable t) {
+                panoramaAus = true;
+            }
+        }
+        if (mc.world == null && !gezeichnet) {
+            ctx.fillGradient(0, 0, width, height, 0xFF0E1419, 0xFF11171C);
+        }
+        try {
+            weichzeichnen(ctx);
+        } catch (Throwable t) {
+            // Ohne Weichzeichner reicht der Schleier
+        }
+        ctx.fill(0, 0, width, height, 0x66060A0E);
     }
 
-    private void verlassen() {
+    @Override
+    public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
+        renderBackground(ctx, mouseX, mouseY, delta);
+        VPanel.rahmen(ctx, width, height);
+        VPanel.seitenleiste(this, ctx, textRenderer, mouseX, mouseY, width, height,
+                "ui.cosmetics");
+
+        VFont.zeichne(ctx, textRenderer, VText.t("ui.wardrobe"), VPanel.inhaltX(width),
+                VPanel.y(height) + Math.round(height * 0.042f), VStyle.TEXT);
+
+        spiegel(ctx);
+
+        for (int i = 0; i < RUBRIKEN.length; i++) {
+            int bx = pilleX(i);
+            int bw = pilleB(i);
+            boolean aktiv = i == rubrik;
+            boolean hover = mouseX >= bx && mouseX <= bx + bw
+                    && mouseY >= pilleY() && mouseY <= pilleY() + pilleH();
+            VStyle.roundRect(ctx, bx, pilleY(), bw, pilleH(), pilleH() / 2,
+                    aktiv ? VStyle.ACCENT : hover ? 0x1AFFFFFF : 0x0CFFFFFF);
+            if (!aktiv) {
+                VStyle.roundOutline(ctx, bx, pilleY(), bw, pilleH(), pilleH() / 2, 0x1AFFFFFF);
+            }
+            VFont.zeichneMittig(ctx, textRenderer, VText.t(RUBRIKEN[i]), bx + bw / 2,
+                    pilleY() + (pilleH() - 8) / 2, aktiv ? 0xFFFFFFFF : VStyle.TEXT_DIM);
+        }
+
+        if (rubrik == 0) capeRaster(ctx, mouseX, mouseY);
+        else miniZeilen(ctx, mouseX, mouseY);
+
+        VPanel.schliessen(ctx, textRenderer, mouseX, mouseY, width, height);
+        super.render(ctx, mouseX, mouseY, delta);
+    }
+
+    /**
+     * Der Spiegel. Zeigt den Avatar so, wie er in diesem Moment aussieht -
+     * mit angelegtem Umhang und mit dem Mini-Me auf seinem Sitzplatz.
+     */
+    private void spiegel(DrawContext ctx) {
+        int x = VPanel.inhaltX(width);
+        int y = pilleY();
+        int b = spiegelB();
+        int h = VPanel.y(height) + VPanel.h(height) - y - Math.round(height * 0.03f);
+
+        VStyle.roundRect(ctx, x, y, b, h, VStyle.R_SMALL, 0x14FFFFFF);
+        VStyle.roundOutline(ctx, x, y, b, h, VStyle.R_SMALL, 0x14FFFFFF);
+
+        VAvatar.zeichne(ctx, x + b / 2, y + Math.round(h * 0.16f), Math.round(h * 0.62f));
+
+        String name = MinecraftClient.getInstance().getSession().getUsername();
+        VFont.zeichneMittig(ctx, textRenderer, name, x + b / 2,
+                y + h - Math.round(height * 0.055f), VStyle.TEXT);
+        String getragen = angelegt == null ? VText.t("ui.nocape") : angelegt;
+        VFont.zeichneMittig(ctx, textRenderer, getragen, x + b / 2,
+                y + h - Math.round(height * 0.030f), VStyle.TEXT_FAINT);
+    }
+
+    private void capeRaster(DrawContext ctx, int mouseX, int mouseY) {
+        int py = VPanel.y(height);
+        ctx.enableScissor(rechtsX(), rasterOben(), rechtsX() + rechtsB(),
+                py + VPanel.h(height) - 6);
+        int cols = spalten();
+        int cw = kachelB();
+        int ch = kachelH();
+        for (int i = 0; i < umhaenge.size(); i++) {
+            int cx = rechtsX() + (i % cols) * (cw + kachelAbstand());
+            int cy = rasterOben() + (i / cols) * zeilenAbstand() - scroll;
+            if (cy + ch < rasterOben() || cy > py + VPanel.h(height)) continue;
+            Umhang u = umhaenge.get(i);
+            boolean hover = mouseX >= cx && mouseX <= cx + cw
+                    && mouseY >= cy && mouseY <= cy + ch;
+            boolean an = i == gewaehlt;
+
+            VStyle.roundRect(ctx, cx, cy, cw, ch, VStyle.R_SMALL,
+                    hover ? 0x26FFFFFF : 0x12FFFFFF);
+            VStyle.roundOutline(ctx, cx, cy, cw, ch, VStyle.R_SMALL,
+                    an ? VStyle.ACCENT : hover ? 0x33FFFFFF : 0x14FFFFFF);
+
+            int balken = Math.round(height * 0.0417f);
+            int kopf = ch - balken;
+            zeichneTraeger(ctx, u, cx + 6, cy + 6, cw - 12, kopf - 12);
+
+            int by = cy + kopf;
+            int farbe = an ? VStyle.ACCENT : 0x66000000;
+            VStyle.roundRect(ctx, cx, by, cw, balken, VStyle.R_XS, farbe);
+            ctx.fill(cx, by, cx + cw, by + VStyle.R_XS, farbe);
+            String name = u.name() == null ? VText.t("ui.nocape") : u.name();
+            VFont.zeichneMittig(ctx, textRenderer, trimmen(name, cw - 10), cx + cw / 2,
+                    by + (balken - 8) / 2, an ? 0xFFFFFFFF : VStyle.TEXT);
+        }
+        ctx.disableScissor();
+    }
+
+    private void miniZeilen(DrawContext ctx, int mouseX, int mouseY) {
+        List<VSetting> liste = miniEinstellungen();
+        int rechts = rechtsX() + rechtsB();
+        for (int i = 0; i < liste.size(); i++) {
+            VSetting s = liste.get(i);
+            int zy = zeileY(i);
+            int zh = zeileH();
+            boolean hover = mouseX >= rechtsX() && mouseX <= rechts
+                    && mouseY >= zy && mouseY <= zy + zh;
+            VStyle.roundRect(ctx, rechtsX(), zy, rechtsB(), zh, VStyle.R_SMALL,
+                    hover ? 0x1AFFFFFF : 0x0CFFFFFF);
+            VFont.zeichne(ctx, textRenderer, s.label, rechtsX() + 10,
+                    zy + (zh - 8) / 2, VStyle.TEXT);
+
+            if (s instanceof VSetting.Toggle t) {
+                boolean an = t.get.getAsBoolean();
+                int bw = 26;
+                int bh = 13;
+                int bx = rechts - bw - 10;
+                int by = zy + (zh - bh) / 2;
+                VStyle.roundRect(ctx, bx, by, bw, bh, bh / 2, an ? VStyle.ACCENT : 0x26FFFFFF);
+                VStyle.roundRect(ctx, an ? bx + bw - bh + 1 : bx + 1, by + 1,
+                        bh - 2, bh - 2, (bh - 2) / 2, 0xFFFFFFFF);
+            } else if (s instanceof VSetting.Stepper st) {
+                zeichneStufe(ctx, rechts - 24, zy + (zh - 16) / 2, "+");
+                zeichneStufe(ctx, rechts - 120, zy + (zh - 16) / 2, "\u2212");
+                VFont.zeichneMittig(ctx, textRenderer, st.display.get(), rechts - 60,
+                        zy + (zh - 8) / 2, VStyle.TEXT_DIM);
+            } else if (s instanceof VSetting.Info in) {
+                String wert = in.value.get();
+                VFont.zeichne(ctx, textRenderer, wert,
+                        rechts - 10 - VFont.breite(textRenderer, wert),
+                        zy + (zh - 8) / 2, VStyle.TEXT_FAINT);
+            }
+        }
+    }
+
+    private void zeichneStufe(DrawContext ctx, int x, int y, String zeichen) {
+        VStyle.roundRect(ctx, x, y, 16, 16, VStyle.R_XS, 0x1AFFFFFF);
+        VFont.zeichneMittig(ctx, textRenderer, zeichen, x + 8, y + 4, VStyle.TEXT);
+    }
+
+    private String trimmen(String text, int maxBreite) {
+        if (VFont.breite(textRenderer, text) <= maxBreite) return text;
+        StringBuilder sb = new StringBuilder();
+        for (char ch : text.toCharArray()) {
+            if (VFont.breite(textRenderer, sb.toString() + ch + "\u2026") > maxBreite) break;
+            sb.append(ch);
+        }
+        return sb + "\u2026";
+    }
+
+    /**
+     * Die Vorderseite des Umhangs in die Kachel zeichnen. Sie liegt im
+     * 64x32-Blatt bei (1,1) und ist 10x16 gross - wer das ganze Blatt malt,
+     * bekommt ein winziges Bild mit Rueckseite und Raendern.
+     */
+    private void zeichneTraeger(DrawContext ctx, Umhang u, int x, int y, int w, int h) {
+        if (u.textur() == null) {
+            VFont.zeichneMittig(ctx, textRenderer, "\u2014", x + w / 2, y + h / 2 - 4,
+                    VStyle.TEXT_FAINT);
+            return;
+        }
+        int bh = Math.min(h, w * 16 / 10);
+        int bw = bh * 10 / 16;
+        Compat.drawTexAusschnitt(ctx, u.textur(), x + (w - bw) / 2, y + (h - bh) / 2,
+                bw, bh, 1f, 1f, 10, 16, 64, 32, 0xFFFFFFFF);
+    }
+
+    private void anziehen(Umhang u) {
+        try {
+            CapeManager.anlegen(u.name());
+            angelegt = u.name();
+        } catch (Throwable t) {
+            // Fehlschlag darf den Bildschirm nicht reissen
+        }
+    }
+
+    @Override
+    public void close() {
         MinecraftClient mc = MinecraftClient.getInstance();
         BlurGuard.restore();
-        mc.setScreen(new VisualHomeScreen(4));
+        if (mc.world == null) mc.setScreen(new VisualTitleScreen());
+        else mc.setScreen(null);
     }
 
     @Override
