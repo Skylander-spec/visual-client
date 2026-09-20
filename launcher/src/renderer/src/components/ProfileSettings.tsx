@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Loader, Profile } from '../env'
 import { LOADERS, loaderInfo } from '../lib/loaders'
 import Modal from './Modal'
@@ -54,10 +54,46 @@ export default function ProfileSettings({
   const [autoVisuals, setAutoVisuals] = useState(profile ? (profile.autoVisuals ?? false) : true)
   const [repairing, setRepairing] = useState(false)
 
-  useEffect(() => {
-    window.visual.profiles.mcVersions().then(setVersions).catch(() => {})
-    window.visual.profiles.systemRamMb().then(setSysRam).catch(() => {})
+  const [versionsFehler, setVersionsFehler] = useState(false)
+
+  /**
+   * Die Versionsliste holen.
+   *
+   * Hier stand ein .catch(() => {}). Ein kurzer Netzhaenger liess die
+   * Liste damit dauerhaft leer - und eine leere Liste heisst: keine
+   * Kacheln, also keine Version waehlbar, ohne ein Wort dazu. Genau das
+   * ist passiert.
+   *
+   * Jetzt wird der Fehler gezeigt, einmal nachgefasst, und es bleibt ein
+   * Rueckfall auf die Versionen, die der Launcher ohnehin unterstuetzt -
+   * damit ist die Auswahl nie leer.
+   */
+  const RUECKFALL = [
+    '1.21.11', '1.21.10', '1.21.9', '1.21.8', '1.21.7', '1.21.6',
+    '1.21.5', '1.21.4', '1.21.3', '1.21.2', '1.21.1', '1.21',
+    '1.20.6', '1.20.4', '1.20.1', '1.19.4', '1.18.2', '1.16.5',
+    '1.12.2', '1.8.9'
+  ]
+
+  const versionenLaden = useCallback(async (): Promise<void> => {
+    try {
+      const liste = await window.visual.profiles.mcVersions()
+      if (liste.length > 0) {
+        setVersions(liste)
+        setVersionsFehler(false)
+        return
+      }
+      throw new Error('leere Liste')
+    } catch {
+      setVersions(RUECKFALL)
+      setVersionsFehler(true)
+    }
   }, [])
+
+  useEffect(() => {
+    void versionenLaden()
+    window.visual.profiles.systemRamMb().then(setSysRam).catch(() => {})
+  }, [versionenLaden])
 
   // Kein Deckel mehr: die 60er-Grenze schnitt alles ab 1.14 abwärts weg —
   // ausgerechnet 1.8.9, die meistgespielte PvP-Version, fehlte dadurch.
@@ -183,6 +219,14 @@ export default function ProfileSettings({
                 value={versionQuery}
                 onChange={(e) => setVersionQuery(e.target.value)}
               />
+              {versionsFehler && (
+                <div className="row" style={{ gap: 8, marginBottom: 10, alignItems: 'center' }}>
+                  <span className="muted">{t('pset.versionsOffline')}</span>
+                  <button className="btn" onClick={() => void versionenLaden()}>
+                    {t('pset.retry')}
+                  </button>
+                </div>
+              )}
               <div className="vgrid">
                 {filteredVersions.map((v) => (
                   <button
