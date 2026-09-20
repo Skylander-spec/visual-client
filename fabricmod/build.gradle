@@ -1,5 +1,5 @@
 plugins {
-    id 'fabric-loom' version '1.17.20'
+    id 'fabric-loom' version '1.17.21'
     // OneConfigs Menue ist Kotlin + Jetpack Compose. Wer seine Bausteine
     // aufrufen will, muss in derselben Sprache schreiben - deshalb Kotlin
     // und der Compose-Compiler hier, obwohl der Rest des Mods Java ist.
@@ -69,7 +69,7 @@ dependencies {
         // versions. Requested 2.4.0, highest known 2.3.0"). Remappen braucht
         // es hier auch gar nicht: wir rufen nur OneConfigs eigene Klassen
         // auf, und in deren Signaturen steht keine Minecraft-Klasse.
-        compileOnly "org.polyfrost.oneconfig:${oneconfig}:1.2.2"
+        modCompileOnly "org.polyfrost.oneconfig:${oneconfig}:1.2.2"
         compileOnly 'org.jetbrains.compose.runtime:runtime-desktop:1.12.0'
         compileOnly 'org.jetbrains.compose.foundation:foundation-desktop:1.12.0'
         compileOnly 'org.jetbrains.compose.ui:ui-desktop:1.12.0'
