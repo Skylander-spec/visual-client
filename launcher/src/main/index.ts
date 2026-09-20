@@ -11,7 +11,7 @@ import { installVisuals } from './visuals'
 import { installPaket } from './paket'
 import { applyPerformance } from './performance'
 import { getSettings, saveSettings } from './settings'
-import { checkForUpdate, checkGithub, updateState, applyUpdate, hasPending, beimBeenden } from './updater'
+import { checkForUpdate, checkGithub, updateState, applyUpdate, hasPending, beimBeenden, listeVersionen, holeVersion } from './updater'
 import { toPayload } from './errors'
 import {
   initDiscord,
@@ -185,6 +185,8 @@ function registerIpc(): void {
     setTimeout(() => app.quit(), 300)
   })
   ipcMain.handle('update:onQuit', (_e, erlauben: boolean) => beimBeenden(erlauben))
+  ipcMain.handle('update:versions', () => listeVersionen())
+  ipcMain.handle('update:pick', async (_e, version: string) => holeVersion(version))
   ipcMain.handle('update:check', async () => {
     checkForUpdate()
     await checkGithub()

@@ -44,6 +44,7 @@ type Release = {
   name?: string
   prerelease?: boolean
   draft?: boolean
+  published_at?: string
   assets?: { name: string; browser_download_url: string }[]
 }
 
@@ -110,7 +111,15 @@ async function vonGithub(): Promise<boolean> {
   const laufend = app.getVersion()
   protokoll(`Release ${version} gefunden, laufend ${laufend}`)
   if (!version || !istNeuer(version, laufend)) return false
+  return inDenKanal(rel, version)
+}
 
+/**
+ * Laedt die app.asar eines Releases in den Kanal — ohne jede Frage, ob
+ * die Nummer hoeher ist. Genau das braucht es fuer "zurueck auf eine alte
+ * Fassung"; die Pruefung, ob sich das lohnt, trifft der Aufrufer.
+ */
+async function inDenKanal(rel: Release, version: string): Promise<boolean> {
   const asar = rel.assets?.find((a) => a.name === 'app.asar')
   const meta = rel.assets?.find((a) => a.name === 'latest.json')
   if (!asar || !meta) {
@@ -152,6 +161,53 @@ async function vonGithub(): Promise<boolean> {
     JSON.stringify({ version, hash: geprueft, source: REPO }, null, 2)
   )
   return true
+}
+
+/** Alle veroeffentlichten Fassungen, neueste zuerst. */
+export async function listeVersionen(): Promise<
+  { version: string; datum: string; laufend: boolean }[]
+> {
+  try {
+    const liste = (await (
+      await holen(`https://api.github.com/repos/${REPO}/releases?per_page=50`, 10_000)
+    ).json()) as Release[]
+    return liste
+      .filter((r) => !r.draft && !r.prerelease && r.assets?.some((a) => a.name === 'app.asar'))
+      .map((r) => ({
+        version: (r.tag_name ?? r.name ?? '').replace(/^v/i, ''),
+        datum: (r.published_at ?? '').slice(0, 10),
+        laufend: (r.tag_name ?? r.name ?? '').replace(/^v/i, '') === app.getVersion()
+      }))
+      .filter((r) => r.version)
+  } catch (err) {
+    protokoll(`Fassungsliste nicht abrufbar: ${err instanceof Error ? err.message : String(err)}`)
+    return []
+  }
+}
+
+/**
+ * Eine bestimmte Fassung in den Kanal legen — auch eine aeltere. Danach
+ * steht sie wie jedes Update bereit und wird auf denselben Wegen
+ * eingespielt (jetzt neu starten oder beim Schliessen).
+ */
+export async function holeVersion(version: string): Promise<{ ok: boolean; version?: string }> {
+  if (!app.isPackaged) return { ok: false }
+  try {
+    const rel = (await (
+      await holen(`https://api.github.com/repos/${REPO}/releases/tags/v${version}`, 10_000)
+    ).json()) as Release
+    const nummer = (rel.tag_name ?? rel.name ?? '').replace(/^v/i, '')
+    if (!nummer) return { ok: false }
+    protokoll(`Fassung ${nummer} wird geholt (laufend ${app.getVersion()})`)
+    if (!(await inDenKanal(rel, nummer))) return { ok: false }
+    // Direkt als wartend setzen: checkForUpdate() wuerde eine aeltere
+    // Nummer als Rueckschritt abweisen — hier ist sie aber gewollt.
+    pendingVersion = nummer
+    return { ok: true, version: nummer }
+  } catch (err) {
+    protokoll(`Fassung ${version} nicht ladbar: ${err instanceof Error ? err.message : String(err)}`)
+    return { ok: false }
+  }
 }
 
 /**

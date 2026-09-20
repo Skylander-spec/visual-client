@@ -168,6 +168,8 @@ export function installMockApi(): void {
       apply: async () => {},
       onQuit: async () => {},
       check: async () => ({ available: false, version: null, current: '1.4.0-dev' }),
+      versions: async () => [],
+      pick: async () => ({ ok: false }),
       onAvailable: () => () => {}
     },
     capes: {

@@ -81,6 +81,29 @@ export default function SettingsModal({
     }
   }
 
+  const [alte, setAlte] = useState<{ version: string; datum: string; laufend: boolean }[] | null>(
+    null
+  )
+  const [holt, setHolt] = useState<string | null>(null)
+  const [fehler, setFehler] = useState(false)
+
+  async function alteZeigen(): Promise<void> {
+    if (alte) return setAlte(null)
+    setAlte(await window.visual.update.versions())
+  }
+
+  async function alteHolen(version: string): Promise<void> {
+    setHolt(version)
+    setFehler(false)
+    try {
+      const r = await window.visual.update.pick(version)
+      if (r.ok) setUpd(await window.visual.update.state())
+      else setFehler(true)
+    } finally {
+      setHolt(null)
+    }
+  }
+
   async function saveDiscord(patch: { discordEnabled?: boolean }): Promise<void> {
     const s = await window.visual.settings.save(patch)
     setDiscordEnabled(s.discordEnabled)
@@ -190,6 +213,48 @@ export default function SettingsModal({
             </>
           )}
         </div>
+
+        <div className="row" style={{ gap: 10, alignItems: 'center', marginBottom: 8 }}>
+          <span className="muted">{tr('update.older')}</span>
+          <div className="grow" />
+          <button className="btn" onClick={alteZeigen}>
+            {alte ? tr('update.hide') : tr('update.show')}
+          </button>
+        </div>
+        {alte && (
+          <div style={{ marginBottom: 22 }}>
+            <div className="muted" style={{ marginBottom: 8 }}>
+              {tr('update.olderHint')}
+            </div>
+            {fehler && (
+              <div className="muted" style={{ marginBottom: 8 }}>
+                {tr('update.failed')}
+              </div>
+            )}
+            {alte.map((f) => (
+              <div
+                key={f.version}
+                className="row"
+                style={{ gap: 10, alignItems: 'center', padding: '6px 0' }}
+              >
+                <b>v{f.version}</b>
+                <span className="muted">{f.datum}</span>
+                <div className="grow" />
+                {f.laufend ? (
+                  <span className="muted">{tr('update.running')}</span>
+                ) : (
+                  <button
+                    className="btn"
+                    disabled={holt !== null}
+                    onClick={() => alteHolen(f.version)}
+                  >
+                    {holt === f.version ? tr('update.loading') : tr('update.load')}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="pset-h">{tr('settings.storage')}</div>
         <div className="muted" style={{ lineHeight: 1.7 }}>
