@@ -1,6 +1,7 @@
 package dev.visual.fabric.ui;
 
 import dev.visual.fabric.AccountStore;
+import dev.visual.fabric.VConfig;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.multiplayer.ConnectScreen;
@@ -47,6 +48,17 @@ public class VisualTitleScreen extends VMouseScreen {
 
     /** Einmal fehlgeschlagen heißt: nicht jeden Frame erneut versuchen. */
     private boolean panoramaAus = false;
+
+    /** Farben des eigenen Hintergrunds. */
+    private static final int OBEN = 0xFF070B12;
+    private static final int UNTEN = 0xFF10161F;
+    private static final int SCHEIN_RGB = 0x22D3EE;
+    private static final int SCHEIN_ALPHA = 13;
+    private static final int RINGE = 26;
+    private static final int VIGNETTE = 0x66000000;
+
+    /** Laeuft mit den Bildern, damit der Schein langsam atmet. */
+    private float puls = 0.0f;
 
     public VisualTitleScreen() {
         super(Text.literal("Visual Client"));
@@ -116,17 +128,19 @@ public class VisualTitleScreen extends VMouseScreen {
     @Override
     public void renderBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {
         boolean gezeichnet = false;
-        if (!panoramaAus) {
+        // Das Vanilla-Panorama nur auf ausdrücklichen Wunsch — es ist genau
+        // der Hintergrund, nach dem ein eigener Client nicht aussehen soll.
+        if (VConfig.get().titelPanorama && !panoramaAus) {
             try {
                 renderPanoramaBackground(ctx, delta);
                 gezeichnet = true;
             } catch (Throwable t) {
-                // Schlägt das Panorama fehl, bleibt der Verlauf als Rückfall
+                // Schlägt das Panorama fehl, bleibt unser Hintergrund
                 panoramaAus = true;
             }
         }
         if (!gezeichnet) {
-            ctx.fillGradient(0, 0, width, height, 0xFF0E1419, 0xFF11171C);
+            eigenerHintergrund(ctx, delta);
         }
         // Weichzeichner statt Schleier: so macht es OneClient auch, nur mit
         // einem eigenen Mod. Minecraft bringt ihn seit 1.20.5 selbst mit.
@@ -139,6 +153,44 @@ public class VisualTitleScreen extends VMouseScreen {
         }
         // Nur noch ein Hauch dunkler, damit die Schrift trägt
         ctx.fill(0, 0, width, height, 0x33060A0E);
+    }
+
+    /**
+     * Unser eigener Hintergrund statt Minecrafts Panorama.
+     *
+     * Drei Lagen, alle gerechnet statt aus einer Bilddatei: ein tiefer
+     * Verlauf von oben nach unten, ein weicher Schein hinter der
+     * Wortmarke, und eine Vignette, die zu den Raendern hin abdunkelt.
+     * Nichts davon muss mitgeliefert werden, nichts kann fehlen, und es
+     * sieht auf jeder Fenstergroesse gleich aus.
+     *
+     * Der Schein atmet langsam — ohne Bewegung wirkt ein Startbildschirm
+     * tot, und ein drehendes Panorama koennen wir hier nicht bieten.
+     */
+    private void eigenerHintergrund(DrawContext ctx, float delta) {
+        ctx.fillGradient(0, 0, width, height, OBEN, UNTEN);
+
+        // Schein hinter der Wortmarke: konzentrische Ringe, nach aussen
+        // immer durchsichtiger. Billiger als ein echter Weichzeichner und
+        // an dieser Stelle nicht davon zu unterscheiden.
+        puls += delta;
+        float atem = 0.86f + 0.14f * (float) Math.sin(puls / 34.0);
+        int mx = width / 2;
+        int my = (int) (height * 0.3465f);
+        int r = (int) (Math.max(width, height) * 0.42f);
+        for (int i = RINGE; i > 0; i--) {
+            float t = (float) i / RINGE;
+            int radius = (int) (r * t);
+            int alpha = (int) (SCHEIN_ALPHA * (1.0f - t) * atem);
+            if (alpha <= 0) continue;
+            ctx.fill(mx - radius, my - radius, mx + radius, my + radius,
+                    (alpha << 24) | SCHEIN_RGB);
+        }
+
+        // Vignette: vier Verlaeufe von den Raendern nach innen.
+        int rand = (int) (Math.min(width, height) * 0.38f);
+        ctx.fillGradient(0, 0, width, rand, VIGNETTE, 0x00000000);
+        ctx.fillGradient(0, height - rand, width, height, 0x00000000, VIGNETTE);
     }
 
     /**

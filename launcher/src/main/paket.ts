@@ -20,6 +20,13 @@ import { VError } from './errors'
  */
 // waveycapes fehlt bewusst: fuer 1.21.11 gibt es auf Modrinth keine
 // Fabric-Fassung. Aufgenommen wird nur, was sich von dort beziehen laesst.
+// polyplus fehlt bewusst: es beschreibt sich selbst als "Various
+// expansions for the OneClient 'modpack'" und bringt OneClients
+// Titelbildschirm mit - eigene Klasse, nicht die von Minecraft,
+// weshalb unser TitleScreen-Mixin nie feuerte. Im Spiel stand dann
+// ONECLIENT statt VISUAL CLIENT. Die einzelnen poly*-Mods
+// (polyblur, polysprint, polytime ...) bleiben, die sind Funktion
+// ohne Marke.
 // animatium fehlt bewusst: es schreibt denselben Mixin-Punkt um wie
 // viewmodel (HeldItemRenderer.renderFirstPersonItem). Zusammen stuerzt
 // Minecraft beim Start ab; viewmodel gewinnt und bleibt.
@@ -120,7 +127,6 @@ const PAKET: string[] = [
   'particle-core',
   'polyblur',
   'polynametag',
-  'polyplus',
   'polysprint',
   'polytime',
   'polytone',

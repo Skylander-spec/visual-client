@@ -31,6 +31,21 @@ public class VisualsFabric implements ClientModInitializer {
         // seinem Menue - gezeichnet von seinem Code, nicht nachgebaut.
         OneConfigBruecke.anmelden();
 
+        // Eigene Themes daneben legen und einschalten, damit im Menue
+        // unser Name und Logo steht statt ihres Standards.
+        //
+        // Der Fang liegt bewusst hier und nicht nur in anmelden(): die
+        // Klasse ist in Kotlin geschrieben, und fehlt im Profil die
+        // Kotlin-Bibliothek, wirft schon das Laden der Klasse einen
+        // NoClassDefFoundError - noch bevor irgendein Fang darin greifen
+        // koennte. Unbehandelt reisst das den Mod-Start mit, und Minecraft
+        // startet gar nicht erst.
+        try {
+            dev.visual.fabric.ui.VisualTheme.anmelden();
+        } catch (Throwable fehler) {
+            System.err.println("[Visual] Theme uebersprungen: " + fehler);
+        }
+
         // Hitmarker: Fabric-Event statt Mixin — feuert clientseitig beim Angriff.
         AttackEntityCallback.EVENT.register((player, world, hand, entity, hit) -> {
             MinecraftClient mc = MinecraftClient.getInstance();

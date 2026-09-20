@@ -31,6 +31,15 @@ public class VConfig {
     public boolean radarNorthUp = false;
     /** Eigener Startbildschirm statt Minecrafts Auswahl. */
     public boolean customTitle = true;
+
+    /**
+     * Minecrafts drehendes Panorama hinter dem Startbildschirm.
+     *
+     * Standard aus: das Vanilla-Panorama ist genau das, wonach ein
+     * eigener Client nicht aussehen soll. Stattdessen zeichnen wir einen
+     * eigenen Hintergrund. Wer das Panorama mag, schaltet es hier an.
+     */
+    public boolean titelPanorama = false;
     /** Minecrafts eigene Knoepfe im Client-Stil zeichnen. */
     public boolean clientMenues = true;
 
