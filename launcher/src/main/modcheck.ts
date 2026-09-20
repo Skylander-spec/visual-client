@@ -4,7 +4,9 @@ import { BrowserWindow } from 'electron'
 import { instanceDir } from './paths'
 import { listProfiles } from './profiles'
 import { installMod } from './modrinth'
+import { installPaket, paketGroesse } from './paket'
 import { entferneDoppelte } from './repair'
+import { loesen } from './konflikte'
 
 /**
  * Prüft beim Start jedes Profil auf die Mods, die der Client selbst braucht.
@@ -86,6 +88,69 @@ export function pruefen(): Fehlend[] {
  * Das Fehlende nachladen und den Fortschritt melden. Gibt zurück, was danach
  * noch fehlt — ohne Netz bleibt das stehen, und der Bildschirm sagt es.
  */
+/**
+ * Das komplette Mod-Paket auf allen passenden Profilen einspielen.
+ *
+ * Frueher war das ein Knopf in den Neuigkeiten, den man finden musste -
+ * und wer ihn nicht drueckte, spielte ohne die Mods, die den Client
+ * ausmachen. Jetzt laeuft es beim Start, fuer jedes Profil.
+ *
+ * Schon vorhandene Mods ueberspringt der Installer, ein zweiter Lauf ist
+ * darum schnell.
+ */
+export async function paketNachziehen(win: BrowserWindow | null): Promise<void> {
+  const profile = listProfiles().filter(
+    (p) => betrifft(p.loader) && unterstuetzt(p.mcVersion)
+  )
+  if (profile.length === 0) return
+
+  const proProfil = paketGroesse()
+  const gesamt = profile.length * proProfil
+  let erledigt = 0
+
+  for (const p of profile) {
+    try {
+      // installPaket meldet je Mod; wir rechnen das auf den Gesamtbalken um,
+      // damit er ueber alle Profile hinweg durchlaeuft statt je Profil neu
+      // bei null anzufangen.
+      await installPaket(win, p.id, (stand) => {
+        melde(win, `${p.name}: ${stand.aktuell}`, erledigt + stand.fertig, gesamt)
+      })
+    } catch {
+      // Ein Profil kann scheitern, die anderen laufen weiter
+    }
+    erledigt += proProfil
+    melde(win, p.name, erledigt, gesamt)
+
+    // Nach dem Einspielen aufraeumen: Konflikte aufloesen, bevor das Spiel
+    // sie als Absturz meldet. Erst die passende Fassung nachladen, sonst
+    // den weniger gebrauchten der beiden abschalten.
+    try {
+      const erg = await loesen(p.id, path.join(instanceDir(p.id), 'mods'), (text) =>
+        melde(win, `${p.name}: ${text}`, erledigt, gesamt)
+      )
+      if (erg.abgeschaltet.length > 0 || erg.nachinstalliert.length > 0) {
+        console.log(
+          `[visuals] ${p.name}: ${erg.nachinstalliert.length} angepasst, ` +
+            `${erg.abgeschaltet.length} abgeschaltet`
+        )
+      }
+    } catch (err) {
+      console.error('[visuals] Konflikte konnten nicht geloest werden:', err)
+    }
+  }
+}
+
+function melde(win: BrowserWindow | null, text: string, fertig: number, gesamt: number): void {
+  if (!win || win.isDestroyed()) return
+  win.webContents.send('modcheck:status', {
+    text,
+    fertig,
+    gesamt,
+    prozent: gesamt === 0 ? 100 : Math.round((fertig / gesamt) * 100)
+  })
+}
+
 export async function nachholen(win: BrowserWindow | null, offen: Fehlend[]): Promise<Fehlend[]> {
   const gesamt = offen.reduce((n, e) => n + e.mods.length, 0)
   let fertig = 0
@@ -117,4 +182,9 @@ export async function nachholen(win: BrowserWindow | null, offen: Fehlend[]): Pr
     if (rest.length > 0) gescheitert.push({ ...eintrag, mods: rest })
   }
   return gescheitert
+}
+
+/** Wie viele Profile das grosse Paket bekommen - 0 heisst: nichts zu tun. */
+export function profileFuerPaket(): number {
+  return listProfiles().filter((p) => betrifft(p.loader) && unterstuetzt(p.mcVersion)).length
 }

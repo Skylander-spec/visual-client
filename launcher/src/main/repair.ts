@@ -158,7 +158,7 @@ function vergleicheVersion(a: string, b: string): number {
 }
 
 /** Eine Datei aus einem Zip lesen, ohne eine Bibliothek dafuer zu brauchen. */
-function leseAusZip(zipDatei: string, name: string): string | null {
+export function leseAusZip(zipDatei: string, name: string): string | null {
   let fd: number | null = null
   try {
     const groesse = fs.statSync(zipDatei).size

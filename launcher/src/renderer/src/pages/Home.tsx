@@ -111,35 +111,7 @@ export default function Home({
   }
 
   // Grosses Mod-Paket. Ueber 140 Eintraege — deshalb Fortschritt je Mod,
-  // sonst sieht es minutenlang nach "haengt" aus.
-  const [packBusy, setPackBusy] = useState(false)
-  const [packText, setPackText] = useState('')
-  useEffect(() => {
-    return window.visual.pack.onStatus((s) => {
-      setPackText(
-        s.aktuell
-          ? `${s.fertig}/${s.gesamt} · ${s.aktuell}`
-          : `${s.installiert} ${t('home.packAdded')}, ${s.uebersprungen} ${t('home.packSkipped')}`
-      )
-    })
-  }, [t])
 
-  async function installPack(): Promise<void> {
-    if (!active || packBusy) return
-    setPackBusy(true)
-    setPackText('')
-    try {
-      const r = await window.visual.pack.install(active.id)
-      setVisualsMsg(
-        `✦ ${r.installiert} ${t('home.packAdded')} · ${r.uebersprungen} ${t('home.packSkipped')}`
-      )
-    } catch (e) {
-      setError(errorText(e, t))
-    } finally {
-      setPackBusy(false)
-      setPackText('')
-    }
-  }
 
   const li = loaderInfo(active?.loader)
   const [skinAnim, setSkinAnim] = useState(() => localStorage.getItem('skinAnim') !== '0')
@@ -252,20 +224,6 @@ export default function Home({
             {perfBusy
               ? t('home.optimizing')
               : t('home.fpsBoostDesc')}
-          </div>
-        </div>
-        <div
-          className="ncard"
-          style={{
-            background:
-              'linear-gradient(160deg, rgba(43,75,255,0.38), rgba(3,10,9,0.9) 70%), radial-gradient(200px 100px at 80% 20%, rgba(99,132,255,0.35), transparent), var(--bg-2)',
-            opacity: packBusy ? 0.6 : 1
-          }}
-          onClick={installPack}
-        >
-          <div className="nt">{'✦ ' + t('home.pack')}</div>
-          <div className="nd">
-            {packBusy ? packText || t('home.packBusy') : t('home.packDesc')}
           </div>
         </div>
         <div

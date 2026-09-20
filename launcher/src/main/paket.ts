@@ -181,9 +181,15 @@ export interface PaketStand {
  * abzubrechen — bei ueber 140 Eintraegen ist immer einer dabei, der auf
  * einer bestimmten Version fehlt.
  */
+/** Wie viele Eintraege das Paket hat - fuer den Gesamtbalken beim Start. */
+export function paketGroesse(): number {
+  return PAKET.length
+}
+
 export async function installPaket(
   win: BrowserWindow | null,
-  profileId: string
+  profileId: string,
+  melden?: (s: PaketStand) => void
 ): Promise<PaketStand> {
   const profil = getProfile(profileId)
   if (!profil) throw new VError('error.profileMissing')
@@ -208,6 +214,7 @@ export async function installPaket(
   for (const slug of PAKET) {
     stand.aktuell = slug
     win?.webContents.send('pack:status', { ...stand })
+    melden?.({ ...stand })
     if (da.has(slug)) {
       stand.uebersprungen++
     } else {
@@ -221,8 +228,10 @@ export async function installPaket(
     }
     stand.fertig++
     win?.webContents.send('pack:status', { ...stand })
+    melden?.({ ...stand })
   }
   stand.aktuell = ''
   win?.webContents.send('pack:status', { ...stand })
+  melden?.({ ...stand })
   return stand
 }

@@ -286,7 +286,11 @@ async function launchProfileSafe(profileId: string, lang?: string): Promise<{
 async function modsPruefen(): Promise<void> {
   try {
     const offen = modcheck.pruefen()
-    if (offen.length === 0) return
+    // Auch ohne fehlende Pflicht-Mods laeuft das grosse Paket durch: es
+    // ueberspringt Vorhandenes, also kostet ein zweiter Start kaum Zeit -
+    // aber niemand spielt mehr versehentlich ohne die Mods.
+    const profile = modcheck.profileFuerPaket()
+    if (offen.length === 0 && profile === 0) return
     const schicken = (kanal: string, nutzlast: unknown): void => {
       if (!win || win.isDestroyed()) return
       if (win.webContents.isLoading()) {
@@ -296,10 +300,11 @@ async function modsPruefen(): Promise<void> {
       }
     }
     schicken('modcheck:start', {
-      profile: offen.length,
+      profile: Math.max(offen.length, profile),
       mods: offen.reduce((n, e) => n + e.mods.length, 0)
     })
-    const rest = await modcheck.nachholen(win, offen)
+    const rest = offen.length > 0 ? await modcheck.nachholen(win, offen) : []
+    await modcheck.paketNachziehen(win)
     schicken('modcheck:done', {
       offen: rest.length,
       namen: rest.map((e) => e.profilName)
