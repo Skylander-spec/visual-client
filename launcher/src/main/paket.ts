@@ -20,10 +20,12 @@ import { VError } from './errors'
  */
 // waveycapes fehlt bewusst: fuer 1.21.11 gibt es auf Modrinth keine
 // Fabric-Fassung. Aufgenommen wird nur, was sich von dort beziehen laesst.
+// animatium fehlt bewusst: es schreibt denselben Mixin-Punkt um wie
+// viewmodel (HeldItemRenderer.renderFirstPersonItem). Zusammen stuerzt
+// Minecraft beim Start ab; viewmodel gewinnt und bleibt.
 const PAKET: string[] = [
   '3dskinlayers',
   'animaticarefabricated',
-  'animatium',
   'appleskin',
   'architectury-api',
   'autogg-fabric',

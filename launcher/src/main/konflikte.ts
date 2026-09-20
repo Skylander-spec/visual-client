@@ -125,7 +125,35 @@ export interface Konflikt {
   gegner: ModInfo
   /** Der Ausdruck, auf den es zutrifft. */
   ausdruck: unknown
+  /**
+   * Bei bekannten Paaren: wer abgeschaltet wird. Ist das gesetzt, hilft
+   * auch keine andere Fassung — dann gar nicht erst danach suchen.
+   */
+  opfer?: string
 }
+
+/**
+ * Paare, die sich erst zur Laufzeit beissen.
+ *
+ * In keiner der beiden fabric.mod.json steht davon etwas, weil der Streit
+ * nicht auf der Ebene der Metadaten stattfindet: beide schreiben denselben
+ * Mixin-Punkt um, der mit der hoeheren Prioritaet gewinnt, und der andere
+ * findet sein Ziel nicht mehr. Die Pruefung darunter liest nur `breaks`
+ * und kann so etwas grundsaetzlich nicht sehen — deshalb diese Liste.
+ */
+const BEKANNT_UNVERTRAEGLICH: { a: string; b: string; opfer: string; grund: string }[] = [
+  {
+    a: 'animatium',
+    b: 'viewmodel',
+    opfer: 'animatium',
+    grund:
+      'beide schreiben HeldItemRenderer.renderFirstPersonItem um; viewmodel ' +
+      'fuehrt es mit Prioritaet 1000 zusammen, danach findet animatium sein ' +
+      'Ziel nicht mehr und Minecraft stuerzt beim Start ab. Geopfert wird ' +
+      'animatium, weil die verstellbare Hand fuer einen PvP-Client das ' +
+      'wichtigere Stueck ist.'
+  }
+]
 
 /** Alle echten Konflikte finden: beide Mods da und die Version passt. */
 export function finden(mods: ModInfo[]): Konflikt[] {
@@ -137,6 +165,13 @@ export function finden(mods: ModInfo[]): Konflikt[] {
       if (!gegner) continue
       if (trifftZu(gegner.version, ausdruck)) out.push({ melder: m, gegner, ausdruck })
     }
+  }
+  for (const b of BEKANNT_UNVERTRAEGLICH) {
+    const a = nachId.get(b.a)
+    const z = nachId.get(b.b)
+    if (!a || !z) continue
+    if (out.some((k) => k.melder.id === b.a || k.gegner.id === b.a)) continue
+    out.push({ melder: a, gegner: z, ausdruck: b.grund, opfer: b.opfer })
   }
   return out
 }
@@ -209,9 +244,11 @@ export async function loesen(
   // 2. Konflikte
   for (const k of finden(mods)) {
     melden?.(`${k.melder.id} / ${k.gegner.id}`)
-    // Erst die neuere Fassung des Gegners versuchen
+    // Erst die neuere Fassung des Gegners versuchen — ausser bei den
+    // bekannten Paaren, wo keine Fassung hilft.
     let geloest = false
     try {
+      if (k.opfer) throw new Error('bekanntes Paar')
       await installMod(profileId, k.gegner.id, 'mod')
       const neu = lesen(modsOrdner).find((m) => m.id === k.gegner.id)
       if (neu && !trifftZu(neu.version, k.ausdruck)) {
@@ -226,7 +263,13 @@ export async function loesen(
     // Sonst den abschalten, an dem weniger haengt
     const wMelder = gewicht(k.melder.id, mods)
     const wGegner = gewicht(k.gegner.id, mods)
-    const opfer = wMelder <= wGegner ? k.melder : k.gegner
+    const opfer = k.opfer
+      ? k.melder.id === k.opfer
+        ? k.melder
+        : k.gegner
+      : wMelder <= wGegner
+        ? k.melder
+        : k.gegner
     try {
       fs.renameSync(
         path.join(modsOrdner, opfer.datei),
