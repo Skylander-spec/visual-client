@@ -6,7 +6,6 @@
     "InGameHudMixin",
     "PlayerEntityRendererMixin",
     "LivingEntityRendererMixin",
-    "PlayerEntityModelMixin",
     "PressableWidgetMixin",
     "ScreenBackgroundMixin",
     "EntryListWidgetMixin",

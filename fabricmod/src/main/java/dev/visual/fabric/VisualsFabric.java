@@ -36,6 +36,7 @@ public class VisualsFabric implements ClientModInitializer {
             MinecraftClient mc = MinecraftClient.getInstance();
             if (player == mc.player) {
                 CombatOverlay.onAttack(mc);
+                CombatTimer.treffer();
                 VisualsExtras.hitParticles(mc, entity);
             }
             return ActionResult.PASS;
@@ -65,6 +66,7 @@ public class VisualsFabric implements ClientModInitializer {
             handleMenuKey(client);
             FakePlayerManager.tick(client);
             MiniMe.tick(client);
+            CombatTimer.tick(client);
             ClickTracker.tick(client);
             VisualsExtras.tick(client);
             applyFullbright(client);

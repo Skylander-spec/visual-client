@@ -38,6 +38,10 @@ public class VConfig {
     public boolean coords = false;
     public boolean cps = false;
     public boolean hitmarker = false;
+    /** Zeigt an, wie lange man auf PvP-Servern noch im Kampf steht. */
+    public boolean combatTimer = false;
+    /** Wie lange ein Treffer nachwirkt, in Sekunden - je Server verschieden. */
+    public int combatDauer = 15;
     public boolean hitSound = true;
     public boolean damageTint = false;
     public boolean armorHud = false;

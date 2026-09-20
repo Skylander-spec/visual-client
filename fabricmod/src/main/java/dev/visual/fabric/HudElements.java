@@ -25,6 +25,7 @@ public final class HudElements {
             new Element("watermark", "hud.watermark", 80, 15),
             new Element("clock", "hud.clock", 48, 14),
             new Element("target", "hud.target", 118, 40),
+            new Element("combat", "hud.combat", 74, 22),
             new Element("items", "hud.items", 52, 60),
             new Element("vanilla_hotbar", "hud.hotbar", 182, 22),
             new Element("vanilla_status", "hud.status", 182, 20)
@@ -43,6 +44,7 @@ public final class HudElements {
             // rechte Spalte, von oben nach unten gestapelt
             case "fps" -> new int[]{screenW - 68, 6};
             case "cps" -> new int[]{screenW - 68, 24};
+            case "combat" -> new int[]{screenW / 2 - 37, 54};
             case "ping" -> new int[]{screenW - 68, 42};
             case "coords" -> new int[]{screenW - 126, 78};
             case "keystrokes" -> new int[]{6, 6};

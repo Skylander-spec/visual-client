@@ -115,6 +115,10 @@ public final class HudOverlay {
             int[] p = HudElements.pos("cps", w, h);
             infoLine(ctx, mc, ClickTracker.left() + " cps", p[0], p[1]);
         }
+        if (c.combatTimer && CombatTimer.imKampf()) {
+            int[] p = HudElements.pos("combat", w, h);
+            kampfAnzeige(ctx, mc, p[0], p[1]);
+        }
         if (c.coords) {
             int[] p = HudElements.pos("coords", w, h);
             String text = String.format("%.0f %.0f %.0f  %s",
@@ -174,6 +178,7 @@ public final class HudOverlay {
         switch (key) {
             case "fps" -> infoLine(ctx, mc, mc.getCurrentFps() + " fps", x, y);
             case "cps" -> infoLine(ctx, mc, ClickTracker.left() + " cps", x, y);
+            case "combat" -> kampfAnzeige(ctx, mc, x, y);
             case "ping" -> infoLine(ctx, mc, ping(mc) + " ms", x, y);
             case "clock" -> infoLine(ctx, mc, java.time.LocalTime.now()
                     .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")), x, y);
@@ -482,5 +487,22 @@ public final class HudOverlay {
         String label = count + VText.t("hud.players");
         ctx.drawText(mc.textRenderer, label, cx - r + 2, cy + r - 10,
                 count > 0 ? ACCENT : 0xFF52756B, false);
+    }
+
+    /**
+     * Kampf-Anzeige: Restzeit als Zahl mit einem Balken darunter. Der Balken
+     * leert sich, damit man die Restzeit auch ohne Lesen abschaetzen kann.
+     */
+    private static void kampfAnzeige(DrawContext ctx, MinecraftClient mc, int x, int y) {
+        String text = String.format(java.util.Locale.ROOT, "%.1fs",
+                CombatTimer.verbleibend());
+        infoLine(ctx, mc, text, x, y);
+
+        int breite = 70;
+        int balken = Math.round(breite * CombatTimer.anteil());
+        ctx.fill(x, y + 14, x + breite, y + 17, 0x66000000);
+        // Rot wenn es knapp wird, sonst der Akzentton
+        int farbe = CombatTimer.anteil() < 0.25f ? 0xFFFF4444 : 0xFF2B4BFF;
+        if (balken > 0) ctx.fill(x, y + 14, x + balken, y + 17, farbe);
     }
 }

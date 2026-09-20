@@ -140,6 +140,14 @@ public final class ModuleRegistry {
                 .add(new VSetting.Toggle(VText.t("set.radar.north"), () -> c.radarNorthUp,
                         v -> set(() -> c.radarNorthUp = v))));
 
+        list.add(new VModule("combattimer", "⏱", VText.t("mod.combattimer"),
+                VText.t("mod.combattimer.d"),
+                () -> c.combatTimer, v -> set(() -> c.combatTimer = v))
+                .add(new VSetting.Stepper(VText.t("set.combatdauer"),
+                        () -> c.combatDauer + "s",
+                        () -> set(() -> c.combatDauer = Math.max(5, c.combatDauer - 5)),
+                        () -> set(() -> c.combatDauer = Math.min(60, c.combatDauer + 5)))));
+
         list.add(new VModule("hitmarker", "✖", VText.t("mod.hitmarker"),
                 VText.t("mod.hitmarker.d"),
                 () -> c.hitmarker, v -> set(() -> c.hitmarker = v))
