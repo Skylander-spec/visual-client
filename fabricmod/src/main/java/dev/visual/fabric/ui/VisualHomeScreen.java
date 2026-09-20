@@ -512,7 +512,7 @@ public class VisualHomeScreen extends VMouseScreen {
     public void close() {
         MinecraftClient mc = MinecraftClient.getInstance();
         BlurGuard.restore();
-        if (mc.world == null) mc.setScreen(new VisualTitleScreen());
+        if (mc.world == null) mc.setScreen(VisualTitleScreen.oeffnen());
         else mc.setScreen(null);
     }
 

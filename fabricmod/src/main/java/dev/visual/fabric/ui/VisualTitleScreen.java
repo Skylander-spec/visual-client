@@ -27,6 +27,28 @@ import java.util.List;
  * unverändert, auch mit anderen Mods.
  */
 public class VisualTitleScreen extends VMouseScreen {
+
+    /**
+     * Den Startbildschirm oeffnen - moeglichst den, den OneConfigs
+     * Renderer zeichnet.
+     *
+     * Ueber Class.forName und nicht per new: VTitleScreen erbt eine
+     * Klasse aus OneConfig. Fehlt OneConfig im Profil, wirft schon das
+     * Aufloesen einen NoClassDefFoundError, bei einem direkten new
+     * womoeglich beim Pruefen dieser Methode - also bevor ein Fang
+     * greifen kann. Dann bleibt dieser Bildschirm hier.
+     */
+    public static net.minecraft.client.gui.screen.Screen oeffnen() {
+        try {
+            return (net.minecraft.client.gui.screen.Screen)
+                    Class.forName("dev.visual.fabric.ui.VTitleScreen")
+                            .getDeclaredConstructor()
+                            .newInstance();
+        } catch (Throwable fehler) {
+            return new VisualTitleScreen();
+        }
+    }
+
     private static final int RAND = 26;
     private static final int SPALTE = 146;
     private static final int MITTE_B = 218;

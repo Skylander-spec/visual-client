@@ -41,7 +41,7 @@ public class ModuleDetailScreen extends VMouseScreen {
     private void verlassen() {
         MinecraftClient mc = MinecraftClient.getInstance();
         BlurGuard.restore();
-        if (mc.world == null) mc.setScreen(new VisualTitleScreen());
+        if (mc.world == null) mc.setScreen(VisualTitleScreen.oeffnen());
         else mc.setScreen(null);
     }
 

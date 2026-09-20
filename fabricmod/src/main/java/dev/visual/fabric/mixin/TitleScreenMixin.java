@@ -24,8 +24,17 @@ public class TitleScreenMixin {
         try {
             if (!VConfig.get().customTitle) return;
             MinecraftClient mc = MinecraftClient.getInstance();
-            if (mc == null || mc.currentScreen instanceof VisualTitleScreen) return;
-            mc.setScreen(new VisualTitleScreen());
+            // Der Wachposten muss beide Fassungen kennen: der Bildschirm
+            // ist entweder VisualTitleScreen oder der von OneConfig
+            // gezeichnete VTitleScreen. Frueher stand hier nur der erste -
+            // nach dem Umstieg haette das bei jedem Durchlauf einen neuen
+            // Bildschirm gesetzt. Ueber den Namen geprueft, weil
+            // VTitleScreen ohne OneConfig gar nicht ladbar ist.
+            if (mc == null || mc.currentScreen == null) return;
+            String klasse = mc.currentScreen.getClass().getName();
+            if (klasse.equals("dev.visual.fabric.ui.VisualTitleScreen")
+                    || klasse.equals("dev.visual.fabric.ui.VTitleScreen")) return;
+            mc.setScreen(VisualTitleScreen.oeffnen());
         } catch (Throwable t) {
             // Lieber der gewohnte Startbildschirm als ein Absturz beim Start
         }
