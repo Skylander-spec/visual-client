@@ -253,10 +253,13 @@ public class VisualCosmeticsScreen extends VMouseScreen {
         LivingEntity spieler = client == null ? null : client.player;
         if (spieler == null) {
             if (u.textur() != null) {
-                // Cape-Bilder sind doppelt so breit wie hoch
-                int bh = Math.min(h, w / 2);
-                Compat.drawTex(ctx, u.textur(), x + (w - bh * 2) / 2, y + (h - bh) / 2,
-                        bh * 2, bh, 64, 32, 0xFFFFFFFF);
+                // Nur die Vorderseite zeigen. Sie liegt im 64x32-Blatt bei
+                // (1,1) und ist 10x16 gross - wer das ganze Blatt malt,
+                // bekommt ein winziges Bild mit Rueckseite und Raendern.
+                int bh = Math.min(h - 8, (w - 8) * 16 / 10);
+                int bw = bh * 10 / 16;
+                Compat.drawTexAusschnitt(ctx, u.textur(), x + (w - bw) / 2,
+                        y + (h - bh) / 2, bw, bh, 1f, 1f, 10, 16, 64, 32, 0xFFFFFFFF);
             } else {
                 ctx.drawCenteredTextWithShadow(textRenderer, "—", x + w / 2, y + h / 2 - 4,
                         VStyle.TEXT_FAINT);

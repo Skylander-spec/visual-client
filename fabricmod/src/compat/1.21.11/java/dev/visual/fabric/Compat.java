@@ -43,6 +43,20 @@ public final class Compat {
                 texW, texH, texW, texH, argb);
     }
 
+    /**
+     * Nur einen Ausschnitt der Textur zeichnen. Fuer Umhaenge noetig:
+     * das Blatt ist 64x32 gross, sichtbar ist davon nur die Vorderseite
+     * bei (1,1) in 10x16 - wer das ganze Blatt malt, bekommt ein
+     * winziges Bild mit Rueckseite und Raendern daneben.
+     */
+    public static void drawTexAusschnitt(DrawContext ctx, Identifier id, int x, int y,
+                                        int w, int h, float u, float v,
+                                        int regionW, int regionH,
+                                        int texW, int texH, int argb) {
+        ctx.drawTexture(RenderPipelines.GUI_TEXTURED, id, x, y, u, v, w, h,
+                regionW, regionH, texW, texH, argb);
+    }
+
     /** Partikel clientseitig erzeugen (Methodenname unterscheidet sich je Version). */
     public static void spawnParticle(World world, ParticleEffect effect,
                                      double x, double y, double z,
