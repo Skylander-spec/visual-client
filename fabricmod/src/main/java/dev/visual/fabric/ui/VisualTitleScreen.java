@@ -53,8 +53,7 @@ public class VisualTitleScreen extends VMouseScreen {
     private static final int OBEN = 0xFF070B12;
     private static final int UNTEN = 0xFF10161F;
     private static final int SCHEIN_RGB = 0x22D3EE;
-    private static final int SCHEIN_ALPHA = 13;
-    private static final int RINGE = 26;
+    private static final int SCHEIN_ALPHA = 64;
     private static final int VIGNETTE = 0x66000000;
 
     /** Laeuft mit den Bildern, damit der Schein langsam atmet. */
@@ -170,22 +169,23 @@ public class VisualTitleScreen extends VMouseScreen {
     private void eigenerHintergrund(DrawContext ctx, float delta) {
         ctx.fillGradient(0, 0, width, height, OBEN, UNTEN);
 
-        // Schein hinter der Wortmarke: konzentrische Ringe, nach aussen
-        // immer durchsichtiger. Billiger als ein echter Weichzeichner und
-        // an dieser Stelle nicht davon zu unterscheiden.
+        // Schein hinter der Wortmarke als waagerechtes Band.
+        //
+        // Zuerst standen hier konzentrische Rechtecke - die haben aber
+        // sichtbare Ecken, ein Quadrat bleibt ein Quadrat, egal wie
+        // durchsichtig. Ein echter Radialverlauf braeuchte pro Bild
+        // Tausende Fuellbefehle oder eine Textur. Ein Band ueber die volle
+        // Breite hat keine Kante, die auffallen koennte, und kostet zwei
+        // Verlaeufe.
         puls += delta;
         float atem = 0.86f + 0.14f * (float) Math.sin(puls / 34.0);
-        int mx = width / 2;
         int my = (int) (height * 0.3465f);
-        int r = (int) (Math.max(width, height) * 0.42f);
-        for (int i = RINGE; i > 0; i--) {
-            float t = (float) i / RINGE;
-            int radius = (int) (r * t);
-            int alpha = (int) (SCHEIN_ALPHA * (1.0f - t) * atem);
-            if (alpha <= 0) continue;
-            ctx.fill(mx - radius, my - radius, mx + radius, my + radius,
-                    (alpha << 24) | SCHEIN_RGB);
-        }
+        int reichweite = (int) (height * 0.34f);
+        int alpha = (int) (SCHEIN_ALPHA * atem);
+        int kern = (alpha << 24) | SCHEIN_RGB;
+        int weg = SCHEIN_RGB;  // Alpha 0 - derselbe Farbton, damit es nicht ins Graue kippt
+        ctx.fillGradient(0, Math.max(0, my - reichweite), width, my, weg, kern);
+        ctx.fillGradient(0, my, width, Math.min(height, my + reichweite), kern, weg);
 
         // Vignette: vier Verlaeufe von den Raendern nach innen.
         int rand = (int) (Math.min(width, height) * 0.38f);
