@@ -216,7 +216,7 @@ public class VisualHomeScreen extends VMouseScreen {
         List<Nav> l = new ArrayList<>();
         l.add(new Nav("ui.secsettings", "ui.modules", "\u25a4", null));
         l.add(new Nav(null, "ui.hudedit", "\u25a6", () -> mc.setScreen(new HudEditorScreen(this))));
-        l.add(new Nav("ui.seclook", "ui.cosmetics", "\u25c8", () -> mc.setScreen(new VisualCosmeticsScreen())));
+        l.add(new Nav("ui.seclook", "ui.cosmetics", "\u25c8", () -> mc.setScreen(VisualCosmeticsScreen.oeffnen())));
         l.add(new Nav("ui.secmore", "ui.modbrowser", "\u2699",
                 () -> mc.setScreen(new ModBrowserScreen(this, "mod"))));
         return l;

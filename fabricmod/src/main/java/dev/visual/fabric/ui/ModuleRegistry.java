@@ -276,7 +276,7 @@ public final class ModuleRegistry {
                 VText.t("mod.cosmetics.d"),
                 null, null)
                 .onOpen(() -> MinecraftClient.getInstance()
-                        .setScreen(new VisualCosmeticsScreen())));
+                        .setScreen(VisualCosmeticsScreen.oeffnen())));
 
         list.add(new VModule("packs", "◫", VText.t("mod.packs"),
                 VText.t("mod.packs.d"),

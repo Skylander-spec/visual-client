@@ -85,7 +85,7 @@ public final class VPanel {
         l.add(new Nav(null, "ui.hudedit", "\u25a6",
                 "ui.hudedit".equals(aktiv) ? null : () -> mc.setScreen(new HudEditorScreen(von))));
         l.add(new Nav("ui.seclook", "ui.cosmetics", "\u25c8",
-                "ui.cosmetics".equals(aktiv) ? null : () -> mc.setScreen(new VisualCosmeticsScreen())));
+                "ui.cosmetics".equals(aktiv) ? null : () -> mc.setScreen(VisualCosmeticsScreen.oeffnen())));
         l.add(new Nav("ui.secmore", "ui.modbrowser", "\u2699",
                 "ui.modbrowser".equals(aktiv) ? null
                         : () -> mc.setScreen(new ModBrowserScreen(von, "mod"))));

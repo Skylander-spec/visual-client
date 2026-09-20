@@ -30,6 +30,29 @@ import java.util.List;
  * Textur selbst — besser als ein leeres Feld.
  */
 public class VisualCosmeticsScreen extends VMouseScreen {
+
+    /**
+     * Den Cosmetics-Bildschirm oeffnen - moeglichst den, den OneConfigs
+     * Renderer zeichnet.
+     *
+     * Ueber Class.forName und nicht per new: VCosmeticsScreen erbt eine
+     * Klasse aus OneConfig. Fehlt OneConfig im Profil, wirft schon das
+     * Aufloesen der Klasse einen NoClassDefFoundError - bei einem
+     * direkten new kann das noch beim Pruefen dieser Methode passieren,
+     * also bevor irgendein Fang greift. Der Umweg holt den Fehler
+     * garantiert in den try-Block.
+     */
+    public static net.minecraft.client.gui.screen.Screen oeffnen() {
+        try {
+            return (net.minecraft.client.gui.screen.Screen)
+                    Class.forName("dev.visual.fabric.ui.VCosmeticsScreen")
+                            .getDeclaredConstructor()
+                            .newInstance();
+        } catch (Throwable fehler) {
+            return new VisualCosmeticsScreen();
+        }
+    }
+
     private static final int NAV_H = 48;
     private static final int PAD = 28;
     private static final int ZU = 24;

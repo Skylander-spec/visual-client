@@ -103,7 +103,7 @@ public class VisualTitleScreen extends VMouseScreen {
         int rb = schmal() ? halb : SPALTE;
         int ry2 = schmal() ? ry + KNOPF_H + LUECKE : my + KNOPF_H + LUECKE;
         felder.add(new Feld(rx, ry2, rb, KNOPF_H, "◈", VText.t("ui.cosmetics"), null,
-                () -> mc.setScreen(new VisualCosmeticsScreen())));
+                () -> mc.setScreen(VisualCosmeticsScreen.oeffnen())));
         felder.add(new Feld(schmal() ? rx + halb + LUECKE : rx,
                 schmal() ? ry2 : ry2 + KNOPF_H + LUECKE, rb, KNOPF_H, "✕",
                 VText.t("ui.quit"), null, mc::scheduleStop));
