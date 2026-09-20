@@ -1,5 +1,10 @@
 plugins {
     id 'fabric-loom' version '1.17.20'
+    // OneConfigs Menue ist Kotlin + Jetpack Compose. Wer seine Bausteine
+    // aufrufen will, muss in derselben Sprache schreiben - deshalb Kotlin
+    // und der Compose-Compiler hier, obwohl der Rest des Mods Java ist.
+    id 'org.jetbrains.kotlin.jvm' version '2.4.20'
+    id 'org.jetbrains.kotlin.plugin.compose' version '2.4.20'
 }
 
 version = '1.0.0'
@@ -29,6 +34,7 @@ base {
 }
 
 sourceSets.main.java.srcDir "src/compat/${cfg.compat}/java"
+sourceSets.main.kotlin.srcDir 'src/main/kotlin'
 
 // OneConfig (Polyfrost) liefert das Menue, das wir wollen. Es ist LGPL-3.0
 // mit Zusatzbedingungen - Einbinden ist genau der Fall, fuer den die LGPL
@@ -54,7 +60,19 @@ dependencies {
     modImplementation "net.fabricmc:fabric-loader:0.19.3"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${cfg.api}"
     if (oneconfig) {
-        modCompileOnly "org.polyfrost.oneconfig:${oneconfig}:1.2.1"
+        // 1.2.2 ist das, was der Launcher auf die Profile legt - dieselbe
+        // Fassung uebersetzen, gegen die spaeter auch gelaufen wird.
+        //
+        // Bewusst compileOnly statt modCompileOnly: modCompileOnly schickt
+        // das Jar durch Looms Remapper, und der scheitert an OneConfig 1.2.2
+        // ("kotlinx-metadata-jvm cannot write metadata for future compiler
+        // versions. Requested 2.4.0, highest known 2.3.0"). Remappen braucht
+        // es hier auch gar nicht: wir rufen nur OneConfigs eigene Klassen
+        // auf, und in deren Signaturen steht keine Minecraft-Klasse.
+        compileOnly "org.polyfrost.oneconfig:${oneconfig}:1.2.2"
+        compileOnly 'org.jetbrains.compose.runtime:runtime-desktop:1.12.0'
+        compileOnly 'org.jetbrains.compose.foundation:foundation-desktop:1.12.0'
+        compileOnly 'org.jetbrains.compose.ui:ui-desktop:1.12.0'
     }
 }
 
@@ -66,6 +84,10 @@ java {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+}
+
+kotlin {
+    jvmToolchain(21)
 }
 
 processResources {
