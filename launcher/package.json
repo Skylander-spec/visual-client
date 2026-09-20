@@ -1,6 +1,6 @@
 {
   "name": "visual-client",
-  "version": "1.6.9",
+  "version": "1.7.0",
   "description": "Visual Client - Minecraft PvP launcher (Forge, Modrinth, Profile)",
   "main": "out/main/index.js",
   "author": "visual",

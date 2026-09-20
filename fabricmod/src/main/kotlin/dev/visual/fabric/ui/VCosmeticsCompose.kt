@@ -38,6 +38,7 @@ import org.polyfrost.oneconfig.internal.ui.components.onClick
 import org.polyfrost.oneconfig.internal.ui.components.rememberInteractionSource
 import org.polyfrost.oneconfig.internal.ui.compose.ComposeScreen
 import org.polyfrost.oneconfig.internal.ui.themes.LocalTheme
+import org.polyfrost.oneconfig.internal.ui.themes.Theme
 import java.io.ByteArrayInputStream
 import java.nio.file.Files
 import java.nio.file.Path
@@ -86,8 +87,23 @@ class VCosmeticsScreen : ComposeScreen() {
         }
     }
 
+    /**
+     * Theme { } muss aussen herum.
+     *
+     * LocalTheme ist bei ihnen als
+     * compositionLocalOf<UITheme> { error("A UI theme is required ...") }
+     * angelegt - ohne Anbieter wirft schon der erste Zugriff. Der
+     * Bildschirm ging dann gar nicht auf: Minecraft fiel sofort auf den
+     * Titelbildschirm zurueck, und weil unser Mixin den wieder ersetzt,
+     * sah es aus, als passiere beim Klick einfach nichts.
+     */
     @Composable
-    override fun compose() {
+    override fun compose() = Theme {
+        inhalt()
+    }
+
+    @Composable
+    private fun inhalt() {
         val theme = LocalTheme.current
         var gewaehlt by remember { mutableStateOf(CapeManager.angelegt() ?: "") }
 

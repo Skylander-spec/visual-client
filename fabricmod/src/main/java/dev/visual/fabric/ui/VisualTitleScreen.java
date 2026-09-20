@@ -82,18 +82,18 @@ public class VisualTitleScreen extends VMouseScreen {
         // Mittelspalte
         int mx = (width - MITTE_B) / 2;
         int my = height / 2 - 6;
-        felder.add(new Feld(mx, my, MITTE_B, KNOPF_H, "▣", VText.t("ui.singleplayer"), null,
+        felder.add(new Feld(mx, my, MITTE_B, KNOPF_H, "person", VText.t("ui.singleplayer"), null,
                 () -> mc.setScreen(new SelectWorldScreen(this))));
-        felder.add(new Feld(mx, my + KNOPF_H + LUECKE, MITTE_B, KNOPF_H, "◉", VText.t("ui.multiplayer"),
+        felder.add(new Feld(mx, my + KNOPF_H + LUECKE, MITTE_B, KNOPF_H, "personen", VText.t("ui.multiplayer"),
                 null, () -> mc.setScreen(new MultiplayerScreen(this))));
-        felder.add(new Feld(mx, my + 2 * (KNOPF_H + LUECKE), MITTE_B, KNOPF_H, "⊕", VText.t("ui.realms"),
+        felder.add(new Feld(mx, my + 2 * (KNOPF_H + LUECKE), MITTE_B, KNOPF_H, "kugel", VText.t("ui.realms"),
                 null, () -> mc.setScreen(new RealmsMainScreen(this))));
 
         int halb = (MITTE_B - LUECKE) / 2;
         int ry = my + 3 * (KNOPF_H + LUECKE);
-        felder.add(new Feld(mx, ry, halb, KNOPF_H, "⚙", VText.t("ui.options"), null,
+        felder.add(new Feld(mx, ry, halb, KNOPF_H, "zahnrad", VText.t("ui.options"), null,
                 () -> mc.setScreen(new OptionsScreen(this, mc.options))));
-        felder.add(new Feld(mx + halb + LUECKE, ry, halb, KNOPF_H, "▤", VText.t("ui.modules"), null,
+        felder.add(new Feld(mx + halb + LUECKE, ry, halb, KNOPF_H, "regler", VText.t("ui.modules"), null,
                 () -> mc.setScreen(new VisualHomeScreen())));
 
         // Cosmetics und Beenden: neben der Mitte, wenn Platz ist — sonst
@@ -102,10 +102,10 @@ public class VisualTitleScreen extends VMouseScreen {
         int rx = schmal() ? mx : width - RAND - SPALTE;
         int rb = schmal() ? halb : SPALTE;
         int ry2 = schmal() ? ry + KNOPF_H + LUECKE : my + KNOPF_H + LUECKE;
-        felder.add(new Feld(rx, ry2, rb, KNOPF_H, "◈", VText.t("ui.cosmetics"), null,
+        felder.add(new Feld(rx, ry2, rb, KNOPF_H, "raute", VText.t("ui.cosmetics"), null,
                 () -> mc.setScreen(VisualCosmeticsScreen.oeffnen())));
         felder.add(new Feld(schmal() ? rx + halb + LUECKE : rx,
-                schmal() ? ry2 : ry2 + KNOPF_H + LUECKE, rb, KNOPF_H, "✕",
+                schmal() ? ry2 : ry2 + KNOPF_H + LUECKE, rb, KNOPF_H, "kreuz",
                 VText.t("ui.quit"), null, mc::scheduleStop));
 
         // Schnellstart links
@@ -228,14 +228,13 @@ public class VisualTitleScreen extends VMouseScreen {
         int cx = width / 2;
         int cy = height / 2 - 82;
 
-        // Bildmarke: vier Rauten um die Mitte. Abgemessen an der Vorlage,
-        // dort ist sie rund ein Drittel so hoch wie der Abstand zur ersten
-        // Knopfreihe — deshalb deutlich groesser als frueher.
-        int s = 10;
-        VStyle.roundRect(ctx, cx - s / 2, cy - 26, s, s, 3, VStyle.TEXT);
-        VStyle.roundRect(ctx, cx - s / 2, cy - 6, s, s, 3, VStyle.TEXT);
-        VStyle.roundRect(ctx, cx - 20, cy - 16, s, s, 3, VStyle.ACCENT);
-        VStyle.roundRect(ctx, cx + 10, cy - 16, s, s, 3, VStyle.ACCENT);
+        // Bildmarke: ein Vierstrahl-Stern.
+        //
+        // Vorher waren es vier abgerundete Quadrate um die Mitte. Das las
+        // sich als Plus aus Bausteinen, waehrend die Vorlage einen Stern
+        // mit eingezogenen Flanken hat - der Unterschied, der am meisten
+        // auffiel. Gezeichnet wird er jetzt, siehe VIcon.stern.
+        VIcon.stern(ctx, cx, cy - 16, 13, VStyle.TEXT);
 
         // Wortmarke doppelt so gross und gesperrt gesetzt. Minecrafts Font
         // kennt keinen Buchstabenabstand, also wird Zeichen fuer Zeichen
@@ -378,11 +377,17 @@ public class VisualTitleScreen extends VMouseScreen {
     private void zeichneFeld(DrawContext ctx, Feld f, boolean hover) {
         glas(ctx, f.x(), f.y(), f.w(), f.h(), hover);
         if (f.symbol() != null) {
-            // Mittelspalten-Knopf: Symbol und Beschriftung zusammen mittig
-            String s = f.symbol() + "  " + f.titel();
-            int tw = VFont.breite(textRenderer, s);
-            ctx.drawText(textRenderer, VFont.t(s), f.x() + (f.w() - tw) / 2, f.y() + (f.h() - 8) / 2,
-                    hover ? VStyle.TEXT : VStyle.TEXT_DIM, false);
+            // Mittelspalten-Knopf: Symbol und Beschriftung zusammen mittig.
+            // Das Symbol wird gezeichnet, nicht gesetzt - siehe VIcon.
+            int farbe = hover ? VStyle.TEXT : VStyle.TEXT_DIM;
+            int g = 8;
+            int tw = VFont.breite(textRenderer, f.titel());
+            int ganz = g + 5 + tw;
+            int sx = f.x() + (f.w() - ganz) / 2;
+            int sy = f.y() + (f.h() - g) / 2;
+            VIcon.zeichne(ctx, f.symbol(), sx, sy, g, farbe);
+            ctx.drawText(textRenderer, VFont.t(f.titel()), sx + g + 5,
+                    f.y() + (f.h() - 8) / 2, farbe, false);
         } else {
             // Serverzeile: Bild links, Name oben, Spielerzahl darunter
             avatar(ctx, f.x() + 5, f.y() + 5, 18, f.titel());
