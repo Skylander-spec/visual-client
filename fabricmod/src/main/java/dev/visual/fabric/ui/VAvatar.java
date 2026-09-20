@@ -47,7 +47,7 @@ public final class VAvatar {
         // und laenger als im Spiel.
         Identifier cape = CapeManager.get(net.minecraft.client.MinecraftClient.getInstance());
         if (cape != null) {
-            teil(ctx, cape, cx - 7 * s, y + 7 * s, 14 * s, 21 * s, 1, 1, 10, 16, 64, 32);
+            teil(ctx, cape, cx - 6 * s, y + 8 * s, 12 * s, 17 * s, 1, 1, 10, 16, 64, 32);
         }
 
         // Kopf, Rumpf, Arme, Beine - erst die Grundschicht
@@ -87,7 +87,9 @@ public final class VAvatar {
             case 2 -> cx - 6 * s;
             default -> cx;
         };
-        int my = c.miniMePos == 0 ? y - 16 * ms : y + 8 * s - 20 * ms;
+        // Die Figur ist 32 Einheiten hoch; damit sie auf dem Platz steht
+        // statt ihn zu ueberlappen, zaehlt die volle Hoehe nach oben.
+        int my = c.miniMePos == 0 ? y - 32 * ms : y + 8 * s - 32 * ms;
 
         teil(ctx, haut, mx - 4 * ms, my, 8 * ms, 8 * ms, 8, 8, 8, 8, 64, 64);
         teil(ctx, haut, mx - 4 * ms, my + 8 * ms, 8 * ms, 12 * ms, 20, 20, 8, 12, 64, 64);

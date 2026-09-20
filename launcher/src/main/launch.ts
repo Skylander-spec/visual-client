@@ -331,6 +331,33 @@ async function sichereFabricApi(profileId: string, loader: string): Promise<void
   }
 }
 
+/**
+ * OneConfig mitliefern lassen.
+ *
+ * Unser Menue ist ein Nachbau; OneConfig ist das Original, und unsere
+ * Module melden sich dort als eigene Seite an. Liegt der Mod nicht im
+ * Profil, sieht man nur den Nachbau - deshalb wird er wie die Fabric API
+ * automatisch nachgeladen.
+ *
+ * OneConfig steht unter LGPL-3.0 und kommt als fertiger Mod von Modrinth;
+ * wir kopieren nichts, wir haengen uns an.
+ */
+async function sichereOneConfig(profileId: string, loader: string): Promise<void> {
+  if (loader !== 'fabric' && loader !== 'quilt') return
+  try {
+    const dir = path.join(instanceDir(profileId), 'mods')
+    fs.mkdirSync(dir, { recursive: true })
+    const da = fs
+      .readdirSync(dir)
+      .some((f) => /oneconfig/i.test(f) && f.toLowerCase().endsWith('.jar'))
+    if (da) return
+    await installMod(profileId, 'oneconfig', 'mod')
+  } catch (err) {
+    // Ohne OneConfig bleibt unser eigenes Menue - das Spiel startet trotzdem
+    console.error('[visuals] OneConfig konnte nicht nachinstalliert werden:', err)
+  }
+}
+
 export async function launchProfile(
   win: BrowserWindow,
   profileId: string,
@@ -424,6 +451,7 @@ export async function launchProfile(
     }
     // Branding-Mod (Fenstertitel + V-Icon) automatisch in Fabric/Quilt-Profile
     await sichereFabricApi(profile.id, loader)
+    await sichereOneConfig(profile.id, loader)
     installBranding(profile.id, loader, profile.mcVersion)
     if (profile.autoVisuals) {
       try {
