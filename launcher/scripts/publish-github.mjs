@@ -27,6 +27,43 @@ const INSTALLER = path.join(OUT, `Visual Client Setup ${version}.exe`)
 // gh ist optional: ohne die CLI wird alles gebaut und der Rest erklaert.
 const gh = spawnSync('gh', ['--version'], { shell: true }).status === 0
 
+/**
+ * Den gebauten Fabric-Mod nach launcher/build holen.
+ *
+ * electron-builder packt "build/visuals-fabric-*.jar" ein, gebaut wird der
+ * Mod aber nach fabricmod/build/libs/visuals-fabric-<mc>-1.0.0.jar. Dazwischen
+ * lag nichts. Folge: jede Fassung nahm die Jars mit, die zufaellig gerade in
+ * build/ lagen — aenderte man den Mod, kam die Aenderung nie beim Spieler an,
+ * und der Launcher schrieb seine alte Kopie beim Start sogar ueber ein von
+ * Hand ins Profil gelegtes Jar. Genau daher kam "es hat sich nichts geaendert".
+ */
+function modUebernehmen() {
+  const libs = path.join(ROOT, '..', 'fabricmod', 'build', 'libs')
+  const ziel = path.join(ROOT, 'build')
+  if (!fs.existsSync(libs)) {
+    console.warn('! fabricmod/build/libs fehlt — Mod-Jars bleiben wie sie sind')
+    return
+  }
+  let uebernommen = 0
+  for (const datei of fs.readdirSync(libs)) {
+    const treffer = datei.match(/^visuals-fabric-(.+)-1\.0\.0\.jar$/)
+    if (!treffer || datei.includes('sources')) continue
+    const von = path.join(libs, datei)
+    const nach = path.join(ziel, `visuals-fabric-${treffer[1]}.jar`)
+    // Nur kopieren, was sich unterscheidet - sonst rauscht bei jedem
+    // Veroeffentlichen dieselbe Liste durch.
+    const gleich =
+      fs.existsSync(nach) && fs.readFileSync(von).equals(fs.readFileSync(nach))
+    if (gleich) continue
+    fs.copyFileSync(von, nach)
+    console.log(`  ${treffer[1]}: Mod aktualisiert`)
+    uebernommen++
+  }
+  console.log(uebernommen ? `> ${uebernommen} Mod-Jar(s) uebernommen` : '> Mod-Jars aktuell')
+}
+
+modUebernehmen()
+
 console.log(`> Baue ${version} …`)
 execSync('npx electron-vite build && npx electron-builder --win', {
   stdio: 'inherit',
