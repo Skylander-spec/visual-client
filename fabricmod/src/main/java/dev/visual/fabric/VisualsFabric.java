@@ -27,6 +27,10 @@ public class VisualsFabric implements ClientModInitializer {
         // wird die Taste direkt (s. u.).
         MENU_KEY = Compat.registerMenuKey();
 
+        // Wenn OneConfig im Profil liegt, erscheinen unsere Module in
+        // seinem Menue - gezeichnet von seinem Code, nicht nachgebaut.
+        OneConfigBruecke.anmelden();
+
         // Hitmarker: Fabric-Event statt Mixin — feuert clientseitig beim Angriff.
         AttackEntityCallback.EVENT.register((player, world, hand, entity, hit) -> {
             MinecraftClient mc = MinecraftClient.getInstance();
