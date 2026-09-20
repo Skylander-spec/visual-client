@@ -122,6 +122,12 @@ export function installMockApi(): void {
       toggleFile: async () => true
     },
     visuals: { install: async () => ({ pack: false, mod: false }) },
+    // Im Browser-Mock fehlt nie etwas, der Bildschirm erscheint also nicht
+    modcheck: {
+      onStart: () => () => {},
+      onStatus: () => () => {},
+      onDone: () => () => {}
+    },
     pack: {
       install: async () => ({
         gesamt: 0,

@@ -4,6 +4,7 @@ import { ensureDirs } from './paths'
 import * as profiles from './profiles'
 import * as modrinth from './modrinth'
 import * as auth from './auth'
+import * as modcheck from './modcheck'
 import * as launch from './launch'
 import * as cosmetics from './cosmetics'
 import { installVisuals } from './visuals'
@@ -94,6 +95,12 @@ app.whenReady().then(() => {
   cosmetics.mitgelieferteCapes()
   registerIpc()
   createWindow()
+
+  // Vor allem anderen: haben alle Profile die Mods, die der Client braucht?
+  // Fehlt etwas, blockiert ein Bildschirm, bis es nachgeladen ist - eine
+  // stille Luecke wie bei OneConfig soll nicht noch einmal monatelang
+  // unbemerkt bleiben. Ist alles da, sieht der Nutzer nichts davon.
+  void modsPruefen()
 
   // Discord Rich Presence: Status an laufende Instanzen koppeln
   launch.setInstanceListener((count, last) => {
@@ -268,5 +275,37 @@ async function launchProfileSafe(profileId: string, lang?: string): Promise<{
   } catch (err) {
     // Nur Schlüssel + Werte über die Grenze — übersetzt wird im Fenster.
     return { ok: false, ...toPayload(err) }
+  }
+}
+
+/**
+ * Prueft die Profile und laedt Fehlendes nach. Der Renderer zeigt dazu einen
+ * Bildschirm, den man nicht wegklicken kann; er verschwindet erst, wenn diese
+ * Funktion "modcheck:done" meldet.
+ */
+async function modsPruefen(): Promise<void> {
+  try {
+    const offen = modcheck.pruefen()
+    if (offen.length === 0) return
+    const schicken = (kanal: string, nutzlast: unknown): void => {
+      if (!win || win.isDestroyed()) return
+      if (win.webContents.isLoading()) {
+        win.webContents.once('did-finish-load', () => win?.webContents.send(kanal, nutzlast))
+      } else {
+        win.webContents.send(kanal, nutzlast)
+      }
+    }
+    schicken('modcheck:start', {
+      profile: offen.length,
+      mods: offen.reduce((n, e) => n + e.mods.length, 0)
+    })
+    const rest = await modcheck.nachholen(win, offen)
+    schicken('modcheck:done', {
+      offen: rest.length,
+      namen: rest.map((e) => e.profilName)
+    })
+  } catch (err) {
+    console.error('[visuals] Mod-Pruefung fehlgeschlagen:', err)
+    if (win && !win.isDestroyed()) win.webContents.send('modcheck:done', { offen: 0, namen: [] })
   }
 }

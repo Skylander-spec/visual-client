@@ -5,6 +5,7 @@ import Login from './pages/Login'
 import type { Account, Profile } from './env'
 import { LangContext, getLang, langChosen, Lang, translate } from './lib/i18n'
 import LanguagePicker from './components/LanguagePicker'
+import ModCheck from './components/ModCheck'
 
 // Seiten erst laden, wenn sie geöffnet werden — kleinere Start-Ladung.
 const Home = lazy(() => import('./pages/Home'))
@@ -15,6 +16,12 @@ const Capes = lazy(() => import('./pages/Capes'))
 const SettingsModal = lazy(() => import('./components/SettingsModal'))
 
 export default function App(): JSX.Element {
+  // Mod-Pruefung beim Start. Meldet der Hauptprozess nichts, ist alles da
+  // und der Bildschirm erscheint nie.
+  const [pruefung, setPruefung] = useState(false)
+  useEffect(() => {
+    return window.visual.modcheck.onStart(() => setPruefung(true))
+  }, [])
   const [account, setAccount] = useState<Account | null>(null)
   const [accounts, setAccounts] = useState<Account[]>([])
   const [booted, setBooted] = useState(false)
@@ -84,6 +91,17 @@ export default function App(): JSX.Element {
               setSpracheGewaehlt(true)
             }}
           />
+        </div>
+      </LangContext.Provider>
+    )
+  }
+
+  if (pruefung) {
+    return (
+      <LangContext.Provider value={lang}>
+        <div className="app">
+          <Titlebar />
+          <ModCheck onFertig={() => setPruefung(false)} />
         </div>
       </LangContext.Provider>
     )

@@ -39,7 +39,8 @@ const PAKET: string[] = [
   'better-stats',
   'black-bar-concealer',
   'blur-plus',
-  'c2me-fabric',
+  // 'c2me-fabric' entfernt: sein Teil c2me-opts-natives-math verlangt
+  // Java 25, wir liefern Java 21 mit. Der Start bricht sonst ab.
   'centered-crosshair',
   'chatting',
   'chattweaks',
@@ -53,7 +54,9 @@ const PAKET: string[] = [
   'crashpatch',
   'crosshairtweaks',
   'cubes-without-borders',
-  'cull-fewer-leaves',
+  // 'cull-fewer-leaves' entfernt: erklaert sich selbst fuer unvereinbar
+  // mit More Culling, und das kommt als Abhaengigkeit anderer Mods mit.
+  // Beide zusammen lassen das Spiel gar nicht erst starten.
   'damagetint',
   'dark-graph',
   'dark-loading-screen',

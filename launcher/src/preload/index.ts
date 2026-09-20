@@ -49,6 +49,24 @@ const api = {
   visuals: {
     install: (profileId: string) => ipcRenderer.invoke('visuals:install', profileId)
   },
+  // Mod-Pruefung beim Start: blockierender Bildschirm, bis alles da ist
+  modcheck: {
+    onStart: (cb: (i: { profile: number; mods: number }) => void) => {
+      const h = (_e: unknown, i: { profile: number; mods: number }): void => cb(i)
+      ipcRenderer.on('modcheck:start', h)
+      return () => ipcRenderer.removeListener('modcheck:start', h)
+    },
+    onStatus: (cb: (s: { text: string; fertig: number; gesamt: number; prozent: number }) => void) => {
+      const h = (_e: unknown, s: { text: string; fertig: number; gesamt: number; prozent: number }): void => cb(s)
+      ipcRenderer.on('modcheck:status', h)
+      return () => ipcRenderer.removeListener('modcheck:status', h)
+    },
+    onDone: (cb: (r: { offen: number; namen: string[] }) => void) => {
+      const h = (_e: unknown, r: { offen: number; namen: string[] }): void => cb(r)
+      ipcRenderer.on('modcheck:done', h)
+      return () => ipcRenderer.removeListener('modcheck:done', h)
+    }
+  },
   pack: {
     install: (profileId: string) => ipcRenderer.invoke('pack:install', profileId),
     onStatus: (cb: (s: unknown) => void) => {

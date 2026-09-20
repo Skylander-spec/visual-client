@@ -11,6 +11,10 @@ export const LANGS: { id: Lang; label: string; flag: string }[] = [
 type Dict = Record<string, string>
 
 const de: Dict = {
+  'modcheck.title': 'Mods werden aktualisiert',
+  'modcheck.checking': 'Profile werden geprüft …',
+  'modcheck.failed': 'Nicht alles konnte geladen werden ({profile}). Prüfe deine Verbindung.',
+  'modcheck.continue': 'Trotzdem fortfahren',
   'home.pack': 'Grosses Mod-Paket',
   'home.packDesc': 'Ueber 140 Mods wie in OneClient, dazu Essential — mit einem Klick ins Profil.',
   'home.packBusy': 'Mods werden installiert …',
@@ -272,6 +276,10 @@ const de: Dict = {
 }
 
 const en: Dict = {
+  'modcheck.title': 'Updating mods',
+  'modcheck.checking': 'Checking profiles …',
+  'modcheck.failed': 'Some downloads failed ({profile}). Check your connection.',
+  'modcheck.continue': 'Continue anyway',
   'home.pack': 'Big mod pack',
   'home.packDesc': 'Over 140 mods like OneClient ships, plus Essential — one click into your profile.',
   'home.packBusy': 'Installing mods …',
@@ -533,6 +541,10 @@ const en: Dict = {
 }
 
 const ru: Dict = {
+  'modcheck.title': 'Обновление модов',
+  'modcheck.checking': 'Проверка профилей …',
+  'modcheck.failed': 'Загрузилось не всё ({profile}). Проверьте соединение.',
+  'modcheck.continue': 'Всё равно продолжить',
   'home.pack': 'Большой набор модов',
   'home.packDesc': 'Больше 140 модов, как в OneClient, плюс Essential — в один клик.',
   'home.packBusy': 'Устанавливаю моды …',

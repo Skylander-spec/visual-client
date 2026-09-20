@@ -1144,3 +1144,64 @@ input[type='range'] {
   border-top: 1px solid var(--border);
   margin: 4px 0;
 }
+
+/* Mod-Pruefung beim Start: deckt alles ab und laesst sich nicht wegklicken.
+   Absicht - eine fehlende Pflicht-Mod soll nicht still uebergangen werden. */
+.modcheck {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 11, 16, 0.96);
+  z-index: 9000;
+}
+
+.modcheck-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 38px 52px;
+  border-radius: 20px;
+  background: #11171c;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  min-width: 380px;
+}
+
+.modcheck-box h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 600;
+}
+
+.modcheck-sub {
+  margin: 0;
+  color: #757883;
+  font-size: 13px;
+  text-align: center;
+}
+
+.modcheck-warn {
+  color: #ffb4b4;
+}
+
+.modcheck-bar {
+  width: 300px;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.modcheck-fill {
+  height: 100%;
+  background: #2b4bff;
+  transition: width 0.25s ease;
+}
+
+.modcheck-count {
+  margin: 0;
+  color: #4b5460;
+  font-size: 12px;
+}
