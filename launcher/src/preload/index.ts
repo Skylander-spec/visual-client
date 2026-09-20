@@ -96,6 +96,8 @@ const api = {
   update: {
     state: () => ipcRenderer.invoke('update:state'),
     apply: () => ipcRenderer.invoke('update:apply'),
+    onQuit: (erlauben: boolean) => ipcRenderer.invoke('update:onQuit', erlauben),
+    check: () => ipcRenderer.invoke('update:check'),
     onAvailable: (cb: (info: { version: string }) => void) => {
       const listener = (_e: unknown, info: { version: string }) => cb(info)
       ipcRenderer.on('update:available', listener)

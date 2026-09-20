@@ -216,6 +216,14 @@ export function checkForUpdate(): { available: boolean; version?: string } {
       protokoll(`Kanal hat ${latest.version}, installiert ist ${app.getVersion()}`)
       return { available: true, version: pendingVersion }
     }
+    // Ist die Nummer im Kanal aelter als die installierte, ist es kein
+    // Update, sondern ein Rueckschritt. Ohne diese Zeile griff darunter der
+    // reine Hash-Vergleich, und ein liegengebliebener Kanal bot an, eine
+    // frisch gebaute Fassung still auf eine alte zurueckzudrehen.
+    if (latest.version && istNeuer(app.getVersion(), latest.version)) {
+      protokoll(`Kanal ist aelter (${latest.version} gegen ${app.getVersion()}) - kein Update`)
+      return { available: false }
+    }
     const channelHash = latest.hash ?? sha256(RELEASE_ASAR)
     const installedHash = sha256(app.getAppPath())
     if (channelHash !== installedHash) {
@@ -293,7 +301,16 @@ export function applyUpdate(relaunch: boolean): void {
   spawn('/bin/bash', [shFile], { detached: true, stdio: 'ignore' }).unref()
 }
 
-/** Ob ein Update aussteht (für die Quit-Logik). */
+/** Der Nutzer hat "Beim Schließen" gewählt - sonst wird nichts erzwungen. */
+let beimBeendenErlaubt = false
+
+/** Schaltet das Einspielen beim Beenden frei (oder wieder ab). */
+export function beimBeenden(erlauben: boolean): void {
+  beimBeendenErlaubt = erlauben
+  protokoll(`Einspielen beim Beenden: ${erlauben ? 'an' : 'aus'}`)
+}
+
+/** Ob beim Beenden eingespielt werden soll - nur nach ausdrücklicher Wahl. */
 export function hasPending(): boolean {
-  return !!pendingVersion
+  return !!pendingVersion && beimBeendenErlaubt
 }

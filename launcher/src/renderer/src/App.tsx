@@ -196,6 +196,15 @@ export default function App(): JSX.Element {
             </span>
             <div className="grow" />
             <button className="btn" onClick={() => setUpdate(null)}>
+              {translate(lang, 'update.later')}
+            </button>
+            <button
+              className="btn"
+              onClick={() => {
+                window.visual.update.onQuit(true)
+                setUpdate(null)
+              }}
+            >
               {translate(lang, 'update.onClose')}
             </button>
             <button className="btn primary" onClick={() => window.visual.update.apply()}>

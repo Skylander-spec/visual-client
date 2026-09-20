@@ -61,6 +61,26 @@ export default function SettingsModal({
     window.visual.settings.get().then((s) => setDiscordEnabled(s.discordEnabled))
   }, [])
 
+  const [upd, setUpd] = useState<{ available: boolean; version: string | null; current: string }>({
+    available: false,
+    version: null,
+    current: ''
+  })
+  const [sucht, setSucht] = useState(false)
+
+  useEffect(() => {
+    window.visual.update.state().then(setUpd)
+  }, [])
+
+  async function suchen(): Promise<void> {
+    setSucht(true)
+    try {
+      setUpd(await window.visual.update.check())
+    } finally {
+      setSucht(false)
+    }
+  }
+
   async function saveDiscord(patch: { discordEnabled?: boolean }): Promise<void> {
     const s = await window.visual.settings.save(patch)
     setDiscordEnabled(s.discordEnabled)
@@ -143,6 +163,32 @@ export default function SettingsModal({
           {discordEnabled
             ? tr('settings.discordHint')
             : tr('settings.discordOff')}
+        </div>
+
+        <div className="pset-h">✨ {tr('update.settings')}</div>
+        <div className="muted" style={{ marginBottom: 10 }}>
+          {tr('update.hint')}
+        </div>
+        <div className="row" style={{ gap: 10, alignItems: 'center', marginBottom: 22 }}>
+          <span className="muted">
+            {tr('update.current')}: <b>v{upd.current}</b>
+          </span>
+          <div className="grow" />
+          {upd.available ? (
+            <>
+              <span className="muted">{translate(lang, 'update.ready', { v: upd.version ?? '' })}</span>
+              <button className="btn primary" onClick={() => window.visual.update.apply()}>
+                {tr('update.install')}
+              </button>
+            </>
+          ) : (
+            <>
+              <span className="muted">{sucht ? '' : tr('update.upToDate')}</span>
+              <button className="btn" disabled={sucht} onClick={suchen}>
+                {sucht ? tr('update.checking') : tr('update.check')}
+              </button>
+            </>
+          )}
         </div>
 
         <div className="pset-h">{tr('settings.storage')}</div>

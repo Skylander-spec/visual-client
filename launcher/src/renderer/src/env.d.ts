@@ -165,6 +165,8 @@ declare global {
       update: {
         state(): Promise<{ available: boolean; version: string | null; current: string }>
         apply(): Promise<void>
+        onQuit(erlauben: boolean): Promise<void>
+        check(): Promise<{ available: boolean; version: string | null; current: string }>
         onAvailable(cb: (info: { version: string }) => void): () => void
       }
       capes: {

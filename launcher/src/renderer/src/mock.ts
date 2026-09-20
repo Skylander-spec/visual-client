@@ -166,6 +166,8 @@ export function installMockApi(): void {
     update: {
       state: async () => ({ available: false, version: null, current: '1.4.0-dev' }),
       apply: async () => {},
+      onQuit: async () => {},
+      check: async () => ({ available: false, version: null, current: '1.4.0-dev' }),
       onAvailable: () => () => {}
     },
     capes: {
