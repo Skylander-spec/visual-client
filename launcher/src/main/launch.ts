@@ -423,8 +423,40 @@ export async function launchProfile(
       const pct = e.total > 0 ? Math.round((e.task / e.total) * 100) : 0
       send(win, 'launch:status', { key: 'launch.downloading', vars: { type: e.type, pct }, progress: pct })
     })
-    launcher.on('debug', (line: string) => send(win, 'launch:log', line))
-    launcher.on('data', (line: string) => send(win, 'launch:log', line))
+    /**
+     * Die Spielausgabe mitschreiben.
+     *
+     * Bisher ging sie nur an die Oberflaeche und war weg, sobald der
+     * Launcher zu war. Stirbt Minecraft ohne Absturzbericht - und das tut
+     * es bei einem Fehler im Bildschirm-Code - gab es hinterher nichts
+     * zum Nachlesen. Genau das hat eine Fehlersuche blockiert.
+     *
+     * Eine Datei je Profil, beim Start geleert, damit sie nicht endlos
+     * waechst.
+     */
+    const logDatei = path.join(DATA_DIR, 'logs', `${profile.id}.log`)
+    try {
+      fs.mkdirSync(path.dirname(logDatei), { recursive: true })
+      fs.writeFileSync(logDatei, `=== ${new Date().toISOString()} ${profile.name} ===\n`)
+    } catch {
+      // Ohne Mitschrift laeuft das Spiel trotzdem
+    }
+    const mitschreiben = (line: string): void => {
+      try {
+        fs.appendFileSync(logDatei, line.endsWith('\n') ? line : line + '\n')
+      } catch {
+        /* Mitschrift ist Beiwerk */
+      }
+    }
+
+    launcher.on('debug', (line: string) => {
+      mitschreiben(line)
+      send(win, 'launch:log', line)
+    })
+    launcher.on('data', (line: string) => {
+      mitschreiben(line)
+      send(win, 'launch:log', line)
+    })
     let counted = false
     const startInstance = (): void => {
       if (!counted) {

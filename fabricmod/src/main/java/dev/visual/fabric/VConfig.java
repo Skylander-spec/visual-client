@@ -68,7 +68,7 @@ public class VConfig {
      * eingeschaltet hat. Das war kein Verschwinden, sondern ein falscher
      * Standard.
      */
-    public boolean combatTimer = true;
+    public boolean combatTimer = false;
     /** Wie lange ein Treffer nachwirkt, in Sekunden - je Server verschieden. */
     public int combatDauer = 15;
     public boolean hitSound = true;
