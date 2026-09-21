@@ -60,7 +60,15 @@ public class VConfig {
     public boolean cps = false;
     public boolean hitmarker = false;
     /** Zeigt an, wie lange man auf PvP-Servern noch im Kampf steht. */
-    public boolean combatTimer = false;
+    /**
+     * Der PvP-Countdown ueber der Schnellzugriffsleiste.
+     *
+     * Stand auf aus, obwohl die Neuigkeiten im Launcher ihn bewerben -
+     * er war also fuer niemanden zu sehen, der ihn nicht selbst
+     * eingeschaltet hat. Das war kein Verschwinden, sondern ein falscher
+     * Standard.
+     */
+    public boolean combatTimer = true;
     /** Wie lange ein Treffer nachwirkt, in Sekunden - je Server verschieden. */
     public int combatDauer = 15;
     public boolean hitSound = true;

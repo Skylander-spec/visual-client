@@ -266,7 +266,7 @@ class VTitleScreen : ComposeScreen() {
             }
             Box(Modifier.weight(1f)) {
                 Karte(ICO + "sliders-04.svg", VText.t("ui.modules"), null, knopf, knopf) {
-                    mc.setScreen(VisualHomeScreen())
+                    mc.setScreen(VisualHomeScreen.oeffnen())
                 }
             }
         }

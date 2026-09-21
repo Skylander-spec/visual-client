@@ -119,7 +119,7 @@ public class VisualTitleScreen extends VMouseScreen {
         felder.add(new Feld(mx, ry, halb, KNOPF_H, "zahnrad", VText.t("ui.options"), null,
                 () -> mc.setScreen(new OptionsScreen(this, mc.options))));
         felder.add(new Feld(mx + halb + LUECKE, ry, halb, KNOPF_H, "regler", VText.t("ui.modules"), null,
-                () -> mc.setScreen(new VisualHomeScreen())));
+                () -> mc.setScreen(VisualHomeScreen.oeffnen())));
 
         // Cosmetics und Beenden: neben der Mitte, wenn Platz ist — sonst
         // darunter. Bei Minecrafts Standardfenster (854x480) ueberlappten

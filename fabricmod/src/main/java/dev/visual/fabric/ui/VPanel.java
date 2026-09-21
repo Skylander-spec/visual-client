@@ -81,7 +81,7 @@ public final class VPanel {
         MinecraftClient mc = MinecraftClient.getInstance();
         List<Nav> l = new ArrayList<>();
         l.add(new Nav("ui.secsettings", "ui.modules", "\u25a4",
-                "ui.modules".equals(aktiv) ? null : () -> mc.setScreen(new VisualHomeScreen())));
+                "ui.modules".equals(aktiv) ? null : () -> mc.setScreen(VisualHomeScreen.oeffnen())));
         l.add(new Nav(null, "ui.hudedit", "\u25a6",
                 "ui.hudedit".equals(aktiv) ? null : () -> mc.setScreen(new HudEditorScreen(von))));
         l.add(new Nav("ui.seclook", "ui.cosmetics", "\u25c8",

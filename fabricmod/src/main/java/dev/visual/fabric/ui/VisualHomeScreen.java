@@ -1,5 +1,6 @@
 package dev.visual.fabric.ui;
 
+import dev.visual.fabric.VConfig;
 import dev.visual.fabric.HudEditorScreen;
 import dev.visual.fabric.ModBrowserScreen;
 import net.minecraft.client.MinecraftClient;
@@ -21,6 +22,29 @@ import java.util.List;
  * auf jeder Fenstergröße stimmen.
  */
 public class VisualHomeScreen extends VMouseScreen {
+
+    /**
+     * Den Modul-Bildschirm oeffnen - moeglichst den, den OneConfigs
+     * Renderer zeichnet.
+     *
+     * Ueber Class.forName statt new, wie bei Titel und Cosmetics:
+     * VModulesScreen erbt von OneConfig, und ohne OneConfig wirft schon
+     * das Aufloesen der Klasse.
+     */
+    public static net.minecraft.client.gui.screen.Screen oeffnen() {
+        if (!VConfig.get().composeUi) {
+            return new VisualHomeScreen();
+        }
+        try {
+            return (net.minecraft.client.gui.screen.Screen)
+                    Class.forName("dev.visual.fabric.ui.VModulesScreen")
+                            .getDeclaredConstructor()
+                            .newInstance();
+        } catch (Throwable fehler) {
+            return new VisualHomeScreen();
+        }
+    }
+
     /** Reiter der oberen Leiste. Leer = alle Module. */
     private static final String[] REITER =
             {"tab.all", "tab.hud", "tab.combat", "tab.view", "tab.cosmetics"};
