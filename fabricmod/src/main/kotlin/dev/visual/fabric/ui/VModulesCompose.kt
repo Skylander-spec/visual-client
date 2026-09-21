@@ -114,6 +114,22 @@ class VModulesScreen : ComposeScreen() {
         )
     }
 
+    /**
+     * ESC fuehrt zurueck, nicht ins Nichts.
+     *
+     * Minecrafts Screen.close() macht setScreen(null). Im Spiel ist das
+     * richtig - im Titelbildschirm gibt es dann aber gar keinen
+     * Bildschirm mehr, und man haengt fest. Genau das ist passiert.
+     */
+    override fun close() {
+        val client = MinecraftClient.getInstance()
+        if (client.world == null) {
+            client.setScreen(VisualTitleScreen.oeffnen())
+        } else {
+            client.setScreen(null)
+        }
+    }
+
     private val mc: MinecraftClient get() = MinecraftClient.getInstance()
 
     /** Einmal aufbauen: all() legt bei jedem Aufruf neue Objekte an. */

@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.visual.fabric.CapeManager
+import net.minecraft.client.MinecraftClient
 import org.polyfrost.oneconfig.internal.ui.components.Text
 import org.polyfrost.oneconfig.internal.ui.components.onClick
 import org.polyfrost.oneconfig.internal.ui.components.rememberInteractionSource
@@ -62,6 +63,22 @@ import java.nio.file.Path
  * statt auf mehreren Bildschirmen verteilt, mit dem Spiegel daneben.
  */
 class VCosmeticsScreen : ComposeScreen() {
+
+    /**
+     * ESC fuehrt zurueck, nicht ins Nichts.
+     *
+     * Minecrafts Screen.close() macht setScreen(null). Im Spiel ist das
+     * richtig - im Titelbildschirm gibt es dann aber gar keinen
+     * Bildschirm mehr, und man haengt fest. Genau das ist passiert.
+     */
+    override fun close() {
+        val client = MinecraftClient.getInstance()
+        if (client.world == null) {
+            client.setScreen(VisualTitleScreen.oeffnen())
+        } else {
+            client.setScreen(null)
+        }
+    }
 
     /** Ein Eintrag im Raster. Das Bild bleibt roh, damit Compose es laden kann. */
     private class Stueck(val name: String, val png: ByteArray?)
@@ -155,11 +172,9 @@ class VCosmeticsScreen : ComposeScreen() {
     /**
      * Der Spiegel.
      *
-     * Zeigt bis auf Weiteres den gewaehlten Umhang gross. Ein echter
-     * 3D-Avatar geht hier nicht: Compose kann keine Minecraft-Figur
-     * zeichnen, dafuer muss Minecrafts eigener Renderer ueber die
-     * Compose-Ebene gelegt werden. Das kommt, sobald die Zeichenmethode
-     * fuer alle zehn Zielversionen geprueft ist.
+     * Die Flaeche in der Mitte bleibt hier leer - dort zeichnet
+     * Minecrafts eigener Renderer, siehe render(). Compose kann keine
+     * Minecraft-Figur zeichnen, also wird sie darueber gelegt.
      */
     @Composable
     private fun Spiegel(e: Dp, gewaehlt: String) {
@@ -180,21 +195,64 @@ class VCosmeticsScreen : ComposeScreen() {
                 VText.t("ui.mirror"), color = theme.textColor,
                 fontSize = (e.value * 0.4f).sp, fontWeight = FontWeight.SemiBold
             )
-            Box(
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                contentAlignment = Alignment.Center
-            ) {
-                Vorschau(
-                    umhaenge.firstOrNull { it.name == gewaehlt }?.png,
-                    Modifier.fillMaxHeight().aspectRatio(10f / 16f),
-                    e
-                )
-            }
+            // Bewusst leer: hier zeichnet Minecrafts Renderer den Avatar
+            // ueber die Compose-Ebene, siehe render(). Compose selbst kann
+            // keine Minecraft-Figur zeichnen.
+            Box(modifier = Modifier.fillMaxWidth().weight(1f))
             Text(
                 if (gewaehlt.isEmpty()) VText.t("ui.nothingworn") else gewaehlt,
                 color = theme.textColorSecondary,
                 fontSize = (e.value * 0.32f).sp
             )
+        }
+    }
+
+    /**
+     * Den Avatar ueber die Compose-Ebene zeichnen.
+     *
+     * Im Spiel die echte Figur ueber InventoryScreen.drawEntity - diese
+     * Ueberladung gibt es wortgleich in 1.21.2 bis 1.21.11, mit javap in
+     * allen geprueft, deshalb ohne Fallunterscheidung. Sie dreht sich mit
+     * der Maus, wie im Inventar.
+     *
+     * Im Titelbildschirm gibt es keinen Spieler; dort zeichnet VAvatar
+     * die Puppe aus derselben Skin-Textur.
+     */
+    override fun render(ctx: net.minecraft.client.gui.DrawContext, mausX: Int, mausY: Int, delta: Float) {
+        super.render(ctx, mausX, mausY, delta)
+        try {
+            val e = height * 0.042f
+            val feldB = width * 0.80f
+            val feldH = height * 0.78f
+            val feldL = (width - feldB) / 2f
+            val feldO = (height - feldH) / 2f
+            val spiegelL = feldL + e * 0.5f
+            val spiegelB = e * 6.4f
+            val spiegelO = feldO + e * 0.5f
+            val spiegelH = feldH - e
+
+            // Zwischen Ueberschrift und Namenszeile
+            val oben = (spiegelO + e * 1.5f).toInt()
+            val unten = (spiegelO + spiegelH - e * 1.2f).toInt()
+            val mitteX = (spiegelL + spiegelB / 2f).toInt()
+            if (unten - oben < 8) return
+
+            val spieler = MinecraftClient.getInstance().player
+            if (spieler != null) {
+                val groesse = ((unten - oben) / 2.4f).toInt().coerceAtLeast(1)
+                net.minecraft.client.gui.screen.ingame.InventoryScreen.drawEntity(
+                    ctx,
+                    mitteX - spiegelB.toInt() / 3, oben,
+                    mitteX + spiegelB.toInt() / 3, unten,
+                    groesse, 0.0625f,
+                    mausX.toFloat(), mausY.toFloat(),
+                    spieler
+                )
+            } else {
+                VAvatar.zeichne(ctx, mitteX, oben, unten - oben)
+            }
+        } catch (fehler: Throwable) {
+            // Lieber ein leerer Spiegel als ein toter Bildschirm
         }
     }
 
