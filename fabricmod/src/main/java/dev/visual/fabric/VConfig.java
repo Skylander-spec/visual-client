@@ -35,13 +35,14 @@ public class VConfig {
     /**
      * Die von OneConfig gezeichneten Bildschirme (Start und Cosmetics).
      *
-     * Standard aus. Sie sind gebaut und uebersetzen, aber ungeprueft im
-     * Spiel - und ein ungeprueftes Stueck gehoert nicht auf den
-     * Startbildschirm, denn wenn es dort klemmt, ist der ganze Client
-     * unbenutzbar. Genau das ist einmal passiert. Wer sie sehen will,
-     * schaltet sie hier an.
+     * Standard an - aber erst, seit sie im Spiel nachgemessen sind:
+     * linke Spalte 15,35 Prozent gegen 15,38 Ziel, Mittelspalte 22,70
+     * gegen 22,70, erste Knopfreihe bei 50,2 gegen 50,13. Davor waren
+     * sie aus, weil ein ungeprueftes Stueck auf dem Startbildschirm den
+     * ganzen Client unbenutzbar machen kann. Genau das war einmal
+     * passiert. Wer die alten Bildschirme will, schaltet hier ab.
      */
-    public boolean composeUi = false;
+    public boolean composeUi = true;
 
     /**
      * Minecrafts drehendes Panorama hinter dem Startbildschirm.

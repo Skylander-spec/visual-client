@@ -88,6 +88,7 @@ export function installMockApi(): void {
         return copy
       },
       openFolder: async () => {},
+      openMods: async () => {},
       exportZip: async () => false,
       systemRamMb: async () => 16384,
       mcVersions: async () => {

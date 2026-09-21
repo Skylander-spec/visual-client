@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
+import fs from 'fs'
 import path from 'path'
 import { ensureDirs } from './paths'
 import * as profiles from './profiles'
@@ -158,6 +159,20 @@ function registerIpc(): void {
   ipcMain.handle('profiles:openFolder', (_e, id: string) => {
     const { instanceDir } = require('./paths') as typeof import('./paths')
     return shell.openPath(instanceDir(id))
+  })
+  /**
+   * Den mods-Ordner eines Profils oeffnen, damit man von Hand etwas
+   * hineinlegen kann.
+   *
+   * Angelegt wird er notfalls: bei einem frisch erstellten Profil, das
+   * noch nie gestartet wurde, gibt es ihn nicht, und shell.openPath
+   * wuerde wortlos nichts tun.
+   */
+  ipcMain.handle('profiles:openMods', (_e, id: string) => {
+    const { instanceDir } = require('./paths') as typeof import('./paths')
+    const ordner = path.join(instanceDir(id), 'mods')
+    fs.mkdirSync(ordner, { recursive: true })
+    return shell.openPath(ordner)
   })
   ipcMain.handle('profiles:export', async (_e, id: string) => {
     const profile = profiles.getProfile(id)

@@ -136,6 +136,14 @@ export default function Profiles({
                   >
                     ▤ Ordner öffnen
                   </button>
+                  <button
+                    onClick={() => {
+                      setMenuFor(null)
+                      window.visual.profiles.openMods(p.id)
+                    }}
+                  >
+                    ◫ Mods-Ordner öffnen
+                  </button>
                   <hr />
                   <button
                     className="danger"

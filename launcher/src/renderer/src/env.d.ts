@@ -100,6 +100,7 @@ declare global {
         remove(id: string): Promise<void>
         duplicate(id: string): Promise<Profile | null>
         openFolder(id: string): Promise<void>
+        openMods(id: string): Promise<void>
         exportZip(id: string): Promise<boolean>
         mcVersions(): Promise<string[]>
         systemRamMb(): Promise<number>

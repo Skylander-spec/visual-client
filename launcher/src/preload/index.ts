@@ -20,6 +20,7 @@ const api = {
     remove: (id: string) => ipcRenderer.invoke('profiles:delete', id),
     duplicate: (id: string) => ipcRenderer.invoke('profiles:duplicate', id),
     openFolder: (id: string) => ipcRenderer.invoke('profiles:openFolder', id),
+    openMods: (id: string) => ipcRenderer.invoke('profiles:openMods', id),
     exportZip: (id: string) => ipcRenderer.invoke('profiles:export', id),
     mcVersions: () => ipcRenderer.invoke('mc:versions'),
     systemRamMb: () => ipcRenderer.invoke('sys:ramMb')
