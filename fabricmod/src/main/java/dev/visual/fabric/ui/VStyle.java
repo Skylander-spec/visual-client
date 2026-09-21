@@ -5,10 +5,19 @@ import net.minecraft.client.gui.DrawContext;
 /**
  * Gestaltung der In-Game-Oberfläche — Vorbild ist Polyfrosts OneClient.
  *
- * Die Werte (Farben, Radien, Abstände) stammen aus dessen offener
- * Gestaltungsdefinition. Übernommen sind nur diese Zahlen, kein Quelltext:
- * OneLauncher steht unter GPL-3.0, und kopierter Code würde diese Lizenz auf
- * den Mod übertragen. Die Umsetzung hier ist eigenständig geschrieben.
+ * Die Werte sind aus OneLauncher uebernommen, Datei fuer Datei
+ * nachgeschlagen statt aus Bildschirmfotos geschaetzt:
+ *
+ *   Farben  packages/oneclient_app/src/theme/colors.rs
+ *   Masse   packages/oneclient_app/src/components/button.rs, size_layout()
+ *
+ * <https://github.com/Polyfrost/OneLauncher> — GPL-3.0, siehe
+ * assets/visualsfabric/ico/ATTRIBUTION.md.
+ *
+ * Zwei Werte stimmten vorher nicht und sind jetzt richtig: component_bg ist
+ * rgb(26,34,40) und war bei uns ...29 statt ...28, und fg_secondary ist
+ * rgb(120,129,141) und war bei uns 757883. Beides faellt einzeln kaum auf
+ * und in der Summe doch — deshalb die Quelle lesen statt pixeln.
  *
  * Kennzeichen des Stils: blaustichiges Dunkel statt neutralem Grau, ein
  * kräftiges Blau als Marke, Text nicht reinweiß sondern leicht blau, und
@@ -23,7 +32,7 @@ public final class VStyle {
     /** Angehobene Fläche, z. B. Seitenleiste (page_elevated). */
     public static final int PANEL = 0xFF151C22;
     /** Bauteil-Hintergrund (component_bg). */
-    public static final int CARD = 0xFF1A2229;
+    public static final int CARD = 0xFF1A2228;
     public static final int CARD_HOVER = 0xFF1D242B;
     public static final int CARD_PRESSED = 0xFF222C35;
     public static final int CARD_DISABLED = 0xFF10181F;
@@ -35,8 +44,29 @@ public final class VStyle {
 
     // ── Schrift ──────────────────────────────────────────────────────────
     public static final int TEXT = 0xFFD5DBFF;
-    public static final int TEXT_DIM = 0xFF757883;
+    public static final int TEXT_DIM = 0xFF78818D;
     public static final int TEXT_FAINT = 0xFF4B5460;
+
+    // ── Knopfmasse, aus button.rs size_layout() ──────────────────
+    /** Klein: Polster 4/8, Radius 6, Schrift 12. */
+    public static final int R_KLEIN = 6;
+    public static final int P_KLEIN_Y = 4, P_KLEIN_X = 8, S_KLEIN = 12;
+    /** Mittel — das Standardmass der Knoepfe: Polster 6/12, Radius 8, Schrift 14. */
+    public static final int R_MITTEL = 8;
+    public static final int P_MITTEL_Y = 6, P_MITTEL_X = 12, S_MITTEL = 14;
+    /** Gross: Polster 8/32, Radius 10, Schrift 18. */
+    public static final int R_GROSS = 10;
+    public static final int P_GROSS_Y = 8, P_GROSS_X = 32, S_GROSS = 18;
+    /** Reiner Symbolknopf: 32x32, Polster 6, Radius 8. */
+    public static final int ICON_KANTE = 32, R_ICON = 8, P_ICON = 6;
+    /** Rahmenbreite: bei ihnen durchgehend 1. */
+    public static final int RAHMEN = 1;
+
+    // ── Seitenmasse, aus theme/mod.rs ────────────────────────────
+    /** NAVBAR_HEIGHT_PX — Hoehe der Kopfleiste. */
+    public static final int KOPFLEISTE = 80;
+    /** HOME_PADDING_PX — Polster der Startseite. */
+    public static final int SEITENPOLSTER = 48;
 
     // ── Marke und Zustände ───────────────────────────────────────────────
     public static final int ACCENT = 0xFF2B4BFF;
