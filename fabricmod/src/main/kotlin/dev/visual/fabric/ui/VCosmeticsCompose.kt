@@ -5,17 +5,20 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -28,6 +31,7 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.loadImageBitmap
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -46,15 +50,16 @@ import java.nio.file.Path
 /**
  * Cosmetics an einem Ort, gezeichnet von OneConfigs Renderer.
  *
- * Der Bildschirm erbt ihren ComposeScreen und nimmt ihre Bausteine:
- * Theme, Schrift, Text. Deshalb sieht er nicht aehnlich aus wie ihr
- * Menue, sondern gleich - es ist derselbe Renderer. Der Aufbau ist
- * unserer, den koennen wir frei aendern.
+ * Alle Masse haengen an der Fensterhoehe, nicht an dp. Genau daran ist
+ * dieser Bildschirm gescheitert: ComposeScreen bekommt Minecrafts
+ * GUI-Faktor als Dichte, und bei Faktor 4 werden aus 260.dp Spiegel-
+ * breite 1040 Pixel und aus GridCells.Adaptive(150.dp) eine Mindest-
+ * breite von 600. Er ging schlicht nicht mehr auf, ohne eine Zeile
+ * Ausgabe. Start- und Modulbildschirm waren laengst umgestellt, dieser
+ * hier war uebersehen worden.
  *
- * Umhaenge und kleine Cosmetics stehen bewusst in einem Raster
- * zusammen statt auf zwei Seiten verteilt, mit dem Spiegel daneben.
- *
- * Loest {@link VisualCosmeticsScreen} ab, sobald er im Spiel steht.
+ * Umhaenge, Mini-Me und Accessoires stehen in Rubriken nebeneinander
+ * statt auf mehreren Bildschirmen verteilt, mit dem Spiegel daneben.
  */
 class VCosmeticsScreen : ComposeScreen() {
 
@@ -62,15 +67,16 @@ class VCosmeticsScreen : ComposeScreen() {
     private class Stueck(val name: String, val png: ByteArray?)
 
     /**
-     * Die Cape-Dateien einmal beim ersten Zugriff lesen.
+     * Die Dateien einmal beim ersten Zugriff lesen.
      *
      * Bewusst nicht in compose(): das laeuft pro Bild, und von der Platte
      * zu lesen wuerde dabei jedes Mal stocken.
      */
-    private val stuecke: List<Stueck> by lazy { lesen() }
+    private val umhaenge: List<Stueck> by lazy { lesen("capes") }
+    private val accessoires: List<Stueck> by lazy { lesen("accessoires") }
 
-    private fun lesen(): List<Stueck> {
-        val ordner: Path = CapeManager.datenOrdner().resolve("capes")
+    private fun lesen(unterordner: String): List<Stueck> {
+        val ordner: Path = CapeManager.datenOrdner().resolve(unterordner)
         if (!Files.isDirectory(ordner)) return emptyList()
         return try {
             Files.list(ordner).use { liste ->
@@ -88,150 +94,214 @@ class VCosmeticsScreen : ComposeScreen() {
     }
 
     /**
-     * Theme { } muss aussen herum.
-     *
-     * LocalTheme ist bei ihnen als
-     * compositionLocalOf<UITheme> { error("A UI theme is required ...") }
-     * angelegt - ohne Anbieter wirft schon der erste Zugriff. Der
-     * Bildschirm ging dann gar nicht auf: Minecraft fiel sofort auf den
-     * Titelbildschirm zurueck, und weil unser Mixin den wieder ersetzt,
-     * sah es aus, als passiere beim Klick einfach nichts.
+     * Theme { } muss aussen herum: LocalTheme ist bei ihnen ein
+     * compositionLocalOf mit error() als Standard, ohne Anbieter wirft
+     * schon der erste Zugriff.
      */
     @Composable
-    override fun compose() = Theme {
-        inhalt()
-    }
+    override fun compose() = Theme { inhalt() }
 
     @Composable
     private fun inhalt() {
         val theme = LocalTheme.current
+        var rubrik by remember { mutableStateOf("umhaenge") }
         var gewaehlt by remember { mutableStateOf(CapeManager.angelegt() ?: "") }
 
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(theme.pageBackground)
-                .padding(24.dp),
-            horizontalArrangement = Arrangement.spacedBy(24.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .width(260.dp)
-                    .fillMaxHeight()
-                    .clip(theme.modCardShape)
-                    .background(theme.modCardBackground)
-                    .border(1.dp, theme.borderColor, theme.modCardShape)
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(
-                    "Spiegel",
-                    color = theme.textColor,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Box(
-                    modifier = Modifier.fillMaxWidth().weight(1f),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Vorschau(
-                        stuecke.firstOrNull { it.name == gewaehlt }?.png,
-                        Modifier.fillMaxHeight().aspectRatio(10f / 16f)
-                    )
-                }
-                Text(
-                    if (gewaehlt.isEmpty()) "Nichts angelegt" else gewaehlt,
-                    color = theme.textColorSecondary,
-                    fontSize = 13.sp
-                )
-            }
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            val e = maxHeight * 0.042f
+            val form = RoundedCornerShape(e * 0.5f)
 
-            Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                Text(
-                    "Cosmetics",
-                    color = theme.textColor,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    stuecke.size.toString() + " Stueck - Umhaenge und Kleinteile an einem Ort",
-                    color = theme.textColorSecondary,
-                    fontSize = 13.sp,
-                    modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
-                )
-                LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 150.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    items(stuecke) { stueck ->
-                        Karte(
-                            stueck = stueck,
-                            aktiv = stueck.name == gewaehlt,
-                            onClick = {
-                                gewaehlt = if (stueck.name == gewaehlt) "" else stueck.name
-                                CapeManager.anlegen(gewaehlt)
-                            }
-                        )
+            Row(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .fillMaxWidth(0.80f)
+                    .fillMaxHeight(0.78f)
+                    .clip(form)
+                    .background(theme.pageBackground)
+                    .border(1.dp, theme.borderColor, form)
+                    .padding(e * 0.5f),
+                horizontalArrangement = Arrangement.spacedBy(e * 0.5f)
+            ) {
+                Spiegel(e, gewaehlt)
+                Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                    Text(
+                        VText.t("ui.cosmetics"), color = theme.textColor,
+                        fontSize = (e.value * 0.52f).sp, fontWeight = FontWeight.SemiBold
+                    )
+                    Row(
+                        modifier = Modifier.padding(top = e * 0.4f, bottom = e * 0.5f),
+                        horizontalArrangement = Arrangement.spacedBy(e * 0.25f)
+                    ) {
+                        for ((schluessel, name) in listOf(
+                            "umhaenge" to VText.t("ui.capes"),
+                            "minime" to VText.t("mod.minime"),
+                            "accessoires" to VText.t("ui.accessoires")
+                        )) {
+                            Chip(name, rubrik == schluessel, e) { rubrik = schluessel }
+                        }
+                    }
+                    when (rubrik) {
+                        "minime" -> Hinweis(VText.t("ui.minimehint"), e)
+                        "accessoires" ->
+                            if (accessoires.isEmpty()) Hinweis(VText.t("ui.accsoon"), e)
+                            else Raster(accessoires, gewaehlt, e) { gewaehlt = it }
+                        else -> Raster(umhaenge, gewaehlt, e) { gewaehlt = it }
                     }
                 }
             }
         }
     }
 
+    /**
+     * Der Spiegel.
+     *
+     * Zeigt bis auf Weiteres den gewaehlten Umhang gross. Ein echter
+     * 3D-Avatar geht hier nicht: Compose kann keine Minecraft-Figur
+     * zeichnen, dafuer muss Minecrafts eigener Renderer ueber die
+     * Compose-Ebene gelegt werden. Das kommt, sobald die Zeichenmethode
+     * fuer alle zehn Zielversionen geprueft ist.
+     */
     @Composable
-    private fun Karte(stueck: Stueck, aktiv: Boolean, onClick: () -> Unit) {
+    private fun Spiegel(e: Dp, gewaehlt: String) {
         val theme = LocalTheme.current
-        val quelle = rememberInteractionSource()
+        val form = RoundedCornerShape(e * 0.3f)
         Column(
             modifier = Modifier
-                .clip(theme.modCardShape)
+                .width(e * 6.4f)
+                .fillMaxHeight()
+                .clip(form)
+                .background(theme.modCardBackground)
+                .border(1.dp, theme.borderColor, form)
+                .padding(e * 0.4f),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(e * 0.3f)
+        ) {
+            Text(
+                VText.t("ui.mirror"), color = theme.textColor,
+                fontSize = (e.value * 0.4f).sp, fontWeight = FontWeight.SemiBold
+            )
+            Box(
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                Vorschau(
+                    umhaenge.firstOrNull { it.name == gewaehlt }?.png,
+                    Modifier.fillMaxHeight().aspectRatio(10f / 16f),
+                    e
+                )
+            }
+            Text(
+                if (gewaehlt.isEmpty()) VText.t("ui.nothingworn") else gewaehlt,
+                color = theme.textColorSecondary,
+                fontSize = (e.value * 0.32f).sp
+            )
+        }
+    }
+
+    @Composable
+    private fun Hinweis(text: String, e: Dp) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(
+                text,
+                color = LocalTheme.current.textColorSecondary,
+                fontSize = (e.value * 0.36f).sp
+            )
+        }
+    }
+
+    @Composable
+    private fun Raster(liste: List<Stueck>, gewaehlt: String, e: Dp, waehlen: (String) -> Unit) {
+        // Feste Spaltenzahl statt Adaptive: Adaptive rechnet mit einer
+        // Mindestbreite in dp, und die ist hier um den GUI-Faktor zu gross.
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(4),
+            horizontalArrangement = Arrangement.spacedBy(e * 0.3f),
+            verticalArrangement = Arrangement.spacedBy(e * 0.3f),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            items(liste) { stueck ->
+                Karte(stueck, stueck.name == gewaehlt, e) {
+                    val neu = if (stueck.name == gewaehlt) "" else stueck.name
+                    waehlen(neu)
+                    runCatching { CapeManager.anlegen(neu) }
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun Chip(name: String, aktiv: Boolean, e: Dp, tun: () -> Unit) {
+        val theme = LocalTheme.current
+        val quelle = rememberInteractionSource()
+        val form = RoundedCornerShape(e * 0.5f)
+        Box(
+            modifier = Modifier
+                .clip(form)
+                .background(if (aktiv) theme.accentTextColor else theme.chipBackground)
+                .onClick(quelle, tun)
+                .padding(horizontal = e * 0.4f, vertical = e * 0.16f)
+        ) {
+            Text(name, color = theme.textColor, fontSize = (e.value * 0.32f).sp)
+        }
+    }
+
+    @Composable
+    private fun Karte(stueck: Stueck, aktiv: Boolean, e: Dp, tun: () -> Unit) {
+        val theme = LocalTheme.current
+        val quelle = rememberInteractionSource()
+        val form = RoundedCornerShape(e * 0.3f)
+        Column(
+            modifier = Modifier
+                .height(e * 4.2f)
+                .clip(form)
                 .background(theme.modCardBackground)
                 .border(
                     if (aktiv) 2.dp else 1.dp,
                     if (aktiv) theme.accentTextColor else theme.borderColor,
-                    theme.modCardShape
+                    form
                 )
-                .onClick(quelle, onClick)
-                .padding(10.dp),
+                .onClick(quelle, tun)
+                .padding(e * 0.25f),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(e * 0.2f)
         ) {
-            Vorschau(stueck.png, Modifier.fillMaxWidth().aspectRatio(10f / 16f))
-            Text(stueck.name, color = theme.textColor, fontSize = 13.sp)
+            Vorschau(stueck.png, Modifier.weight(1f).aspectRatio(10f / 16f), e)
+            Text(stueck.name, color = theme.textColor, fontSize = (e.value * 0.3f).sp)
         }
     }
 
     /**
      * Die Vorderseite eines Umhangs.
      *
-     * Eine Cape-Datei ist 64x32, die Vorderseite liegt bei (1,1) und ist
-     * 10x16 gross. Das ganze Blatt anzuzeigen war der Fehler von frueher:
-     * dann steht ein winziges Bild in einer leeren Flaeche. Hoehere
-     * Aufloesungen sind Vielfache davon, deshalb der Faktor aus der Breite.
+     * Ein Cape-Blatt ist 64x32, die Vorderseite liegt bei (1,1) und ist
+     * 10x16 gross; hoehere Aufloesungen sind Vielfache davon, daher der
+     * Faktor aus der Breite. Der Ausschnitt wird auf das Bild begrenzt -
+     * eine Datei, die kein Cape-Blatt ist, soll ein leeres Feld geben und
+     * nicht den Bildschirm mitnehmen.
      */
     @Composable
-    private fun Vorschau(png: ByteArray?, modifier: Modifier) {
+    private fun Vorschau(png: ByteArray?, modifier: Modifier, e: Dp) {
         val theme = LocalTheme.current
+        val form = RoundedCornerShape(e * 0.2f)
         val bild = remember(png) {
             png?.let { runCatching { loadImageBitmap(ByteArrayInputStream(it)) }.getOrNull() }
         }
         if (bild == null) {
-            Box(modifier.clip(theme.checkBoxShape).background(theme.componentBackground))
+            Box(modifier.clip(form).background(theme.componentBackground))
             return
         }
         val f = (bild.width / 64).coerceAtLeast(1)
+        val breite = (10 * f).coerceAtMost(bild.width - f)
+        val hoehe = (16 * f).coerceAtMost(bild.height - f)
+        if (breite <= 0 || hoehe <= 0) {
+            Box(modifier.clip(form).background(theme.componentBackground))
+            return
+        }
         Image(
-            painter = BitmapPainter(
-                bild,
-                IntOffset(1 * f, 1 * f),
-                IntSize(10 * f, 16 * f)
-            ),
+            painter = BitmapPainter(bild, IntOffset(f, f), IntSize(breite, hoehe)),
             contentDescription = null,
             contentScale = ContentScale.Fit,
-            modifier = modifier.clip(theme.checkBoxShape)
+            modifier = modifier.clip(form)
         )
     }
 }
