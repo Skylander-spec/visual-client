@@ -128,4 +128,21 @@ public final class Compat {
             return null;
         }
     }
+
+    /**
+     * Eigener Rahmen auf dem Matrix-Stapel.
+     *
+     * Bis 1.21.5 heisst es push()/pop() auf einem MatrixStack, ab 1.21.6
+     * pushMatrix()/popMatrix() auf einem Matrix3x2fStack. Wer nach
+     * Compose zeichnet, braucht das: deren Renderer laesst eine
+     * Transformation stehen, und ohne eigenen Rahmen landet alles
+     * Folgende darin.
+     */
+    public static void matrixAuf(net.minecraft.client.gui.DrawContext ctx) {
+        ctx.getMatrices().push();
+    }
+
+    public static void matrixZu(net.minecraft.client.gui.DrawContext ctx) {
+        ctx.getMatrices().pop();
+    }
 }

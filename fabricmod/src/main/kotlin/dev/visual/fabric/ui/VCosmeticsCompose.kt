@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.visual.fabric.CapeManager
+import dev.visual.fabric.Compat
 import net.minecraft.client.MinecraftClient
 import org.polyfrost.oneconfig.internal.ui.components.Text
 import org.polyfrost.oneconfig.internal.ui.components.onClick
@@ -220,6 +221,11 @@ class VCosmeticsScreen : ComposeScreen() {
      */
     override fun render(ctx: net.minecraft.client.gui.DrawContext, mausX: Int, mausY: Int, delta: Float) {
         super.render(ctx, mausX, mausY, delta)
+        // Compose hinterlaesst eine Transformation auf dem Matrix-Stapel.
+        // Ohne eigenen Rahmen zeichnet alles Folgende darin - die Figur
+        // landete dadurch weit oberhalb des Spiegels, ausserhalb des
+        // Fensters. Push/pop stellt den Ursprung wieder her.
+        Compat.matrixAuf(ctx)
         try {
             val e = height * 0.042f
             val feldB = width * 0.80f
@@ -253,6 +259,8 @@ class VCosmeticsScreen : ComposeScreen() {
             }
         } catch (fehler: Throwable) {
             // Lieber ein leerer Spiegel als ein toter Bildschirm
+        } finally {
+            Compat.matrixZu(ctx)
         }
     }
 
