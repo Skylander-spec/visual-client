@@ -58,6 +58,20 @@ import org.polyfrost.oneconfig.internal.ui.themes.Theme
  */
 class VTitleScreen : ComposeScreen() {
 
+    private companion object {
+        /**
+         * Unsere eigenen Symbole im Jar.
+         *
+         * OneConfigs Icon() loest einen Namen ohne '/' zu
+         * /assets/oneconfig/ico/<name>.svg auf, einen mit '/' dagegen als
+         * Pfad - so kommen wir an unsere eigenen heran. Die Dateien
+         * stammen aus OneLauncher (GPL-3.0), Herkunft steht in
+         * assets/visualsfabric/ico/ATTRIBUTION.md.
+         */
+        const val ICO = "/assets/visualsfabric/ico/"
+    }
+
+
     private val mc: MinecraftClient get() = MinecraftClient.getInstance()
 
     /**
@@ -125,7 +139,7 @@ class VTitleScreen : ComposeScreen() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Icon("star-filled", color = theme.textColor, modifier = Modifier.size(44.dp))
+            Icon(ICO + "rocket-02.svg", color = theme.textColor, modifier = Modifier.size(44.dp))
             // Eng und schwer gesetzt wie die Vorlage. Vorher war die
             // Wortmarke duenn und weit gesperrt - das las sich luftig
             // statt als Marke.
@@ -152,7 +166,7 @@ class VTitleScreen : ComposeScreen() {
             // Adresse. Die Vorlage zeigt immer die Zahl, weil sie die
             // Server anpingt; das kommt spaeter.
             val unter = s.playerCountLabel?.string?.takeIf { it.isNotBlank() } ?: s.address
-            Karte("cloud", s.name, unter, hoch = true) {
+            Karte(ICO + "globe-01.svg", s.name, unter, hoch = true) {
                 ConnectScreen.connect(
                     mc.currentScreen, mc, ServerAddress.parse(s.address), s, false, null
                 )
@@ -162,27 +176,27 @@ class VTitleScreen : ComposeScreen() {
 
     @Composable
     private fun Mitte() {
-        Karte("profiles", VText.t("ui.singleplayer"), null) {
+        Karte(ICO + "play.svg", VText.t("ui.singleplayer"), null) {
             mc.setScreen(SelectWorldScreen(mc.currentScreen))
         }
-        Karte("cloud", VText.t("ui.multiplayer"), null) {
+        Karte(ICO + "users-01.svg", VText.t("ui.multiplayer"), null) {
             mc.setScreen(MultiplayerScreen(mc.currentScreen))
         }
-        Karte("settings", VText.t("ui.options"), null) {
+        Karte(ICO + "settings-01.svg", VText.t("ui.options"), null) {
             mc.setScreen(OptionsScreen(mc.currentScreen, mc.options))
         }
-        Karte("layers", VText.t("ui.modules"), null) {
+        Karte(ICO + "sliders-04.svg", VText.t("ui.modules"), null) {
             mc.setScreen(VisualHomeScreen())
         }
     }
 
     @Composable
     private fun Rechts() {
-        Karte("profiles", mc.session.username, null) { }
-        Karte("star", VText.t("ui.cosmetics"), null) {
+        Karte(ICO + "users-01.svg", mc.session.username, null) { }
+        Karte(ICO + "brush-01.svg", VText.t("ui.cosmetics"), null) {
             mc.setScreen(VisualCosmeticsScreen.oeffnen())
         }
-        Karte("close", VText.t("ui.quit"), null) { mc.scheduleStop() }
+        Karte(ICO + "x-close.svg", VText.t("ui.quit"), null) { mc.scheduleStop() }
     }
 
     /**
