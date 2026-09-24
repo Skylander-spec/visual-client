@@ -32,6 +32,15 @@ public class VisualHomeScreen extends VMouseScreen {
      * das Aufloesen der Klasse.
      */
     public static net.minecraft.client.gui.screen.Screen oeffnen() {
+        if (VConfig.get().composeUi) {
+            var original = dev.visual.fabric.OneConfigBruecke.bildschirm();
+            if (original != null) return original;
+        }
+        return eigeneModule();
+    }
+
+    /** All project-specific options remain reachable from the original OneConfig menu. */
+    public static net.minecraft.client.gui.screen.Screen eigeneModule() {
         if (!VConfig.get().composeUi) {
             return new VisualHomeScreen();
         }

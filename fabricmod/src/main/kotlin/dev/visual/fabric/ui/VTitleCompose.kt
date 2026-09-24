@@ -130,7 +130,7 @@ class VTitleScreen : ComposeScreen() {
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        listOf(Color(0xFF070B12), Color(0xFF0D1620), Color(0xFF10161F))
+                        listOf(Color(0x8A070B12), Color(0x500D1620), Color(0xA810161F))
                     )
                 )
         ) {
@@ -208,7 +208,7 @@ class VTitleScreen : ComposeScreen() {
             verticalArrangement = Arrangement.spacedBy(knopf * 0.35f)
         ) {
             Icon(
-                ICO + "rocket-02.svg",
+                "/assets/visualsfabric/textures/logo.svg",
                 color = theme.textColor,
                 modifier = Modifier.size(knopf * 1.6f)
             )
@@ -224,12 +224,15 @@ class VTitleScreen : ComposeScreen() {
     @Composable
     private fun Schnellstart(karte: Dp, luecke: Dp, knopf: Dp) {
         val theme = LocalTheme.current
-        Text(
-            VText.t("ui.quickstart"),
-            color = theme.textColorSecondary,
-            fontSize = (knopf.value * 0.36f).sp,
-            modifier = Modifier.padding(bottom = luecke)
-        )
+        Karte(ICO + "arrow-right.svg", VText.t("ui.quickstart"), null, knopf, knopf) {
+            mc.setScreen(MultiplayerScreen(mc.currentScreen))
+        }
+        Spacer(Modifier.height(luecke))
+        if (server.isEmpty()) {
+            Karte(ICO + "plus.svg", VText.t("ui.multiplayer"), VText.t("ui.addserver"), karte, knopf) {
+                mc.setScreen(MultiplayerScreen(mc.currentScreen))
+            }
+        }
         for (s in server) {
             // Spielerzahl, wenn Minecraft sie kennt - sonst die Adresse.
             val unter = s.playerCountLabel?.string?.takeIf { it.isNotBlank() } ?: s.address
@@ -274,7 +277,12 @@ class VTitleScreen : ComposeScreen() {
 
     @Composable
     private fun Rechts(knopf: Dp) {
-        Karte(ICO + "users-01.svg", mc.session.username, null, knopf, knopf) { }
+        Row(Modifier.fillMaxWidth().height(knopf), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center) {
+            Icon(ICO + "users-01.svg", color = LocalTheme.current.textColor, modifier = Modifier.size(knopf * 0.46f))
+            Text(mc.session.username, color = LocalTheme.current.textColor,
+                fontSize = (knopf.value * 0.40f).sp, modifier = Modifier.padding(start = knopf * 0.28f))
+        }
         Karte(ICO + "brush-01.svg", VText.t("ui.cosmetics"), null, knopf, knopf) {
             mc.setScreen(VisualCosmeticsScreen.oeffnen())
         }
@@ -307,8 +315,8 @@ class VTitleScreen : ComposeScreen() {
                 .fillMaxWidth()
                 .height(hoehe)
                 .clip(form)
-                .background(theme.componentBackground)
-                .border(1.dp, theme.borderColor, form)
+                .background(Color(0x99202A36))
+                .border((knopf * 0.035f).coerceAtLeast(1.dp), Color(0x889EA8B8), form)
                 .onClick(quelle, tun)
                 .padding(horizontal = knopf * 0.35f),
             verticalAlignment = Alignment.CenterVertically,

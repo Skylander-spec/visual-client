@@ -15,8 +15,8 @@ group = 'dev.visual'
 // gemeinsam.
 def mcVer = project.findProperty('mcVer') ?: '1.21.9'
 def versions = [
-        '1.21.2': [yarn: '1.21.2+build.1', api: '0.106.1+1.21.2', compat: '1.21.4', depends: '1.21.2', oneconfig: '1.21.4-fabric'],
-        '1.21.3': [yarn: '1.21.3+build.2', api: '0.114.1+1.21.3', compat: '1.21.4', depends: '1.21.3', oneconfig: '1.21.4-fabric'],
+        '1.21.2': [yarn: '1.21.2+build.1', api: '0.106.1+1.21.2', compat: '1.21.2', depends: '1.21.2', oneconfig: '1.21.4-fabric'],
+        '1.21.3': [yarn: '1.21.3+build.2', api: '0.114.1+1.21.3', compat: '1.21.2', depends: '1.21.3', oneconfig: '1.21.4-fabric'],
         '1.21.4': [yarn: '1.21.4+build.8', api: '0.119.4+1.21.4', compat: '1.21.4', depends: '1.21.4', oneconfig: '1.21.4-fabric'],
         '1.21.5': [yarn: '1.21.5+build.1', api: '0.128.2+1.21.5', compat: '1.21.5', depends: '1.21.5', oneconfig: '1.21.5-fabric'],
         '1.21.6': [yarn: '1.21.6+build.1', api: '0.128.2+1.21.6', compat: '1.21.6', depends: '1.21.6', oneconfig: '1.21.8-fabric'],
@@ -60,8 +60,8 @@ dependencies {
     modImplementation "net.fabricmc:fabric-loader:0.19.3"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${cfg.api}"
     if (oneconfig) {
-        // 1.2.2 ist das, was der Launcher auf die Profile legt - dieselbe
-        // Fassung uebersetzen, gegen die spaeter auch gelaufen wird.
+        // Build-API 1.2.2; bestehende Profile enthalten auch OneConfig 1.0.x.
+        // Factory und Screen-Lebenszyklus beruecksichtigen beide Fassungen.
         //
         // Bewusst compileOnly statt modCompileOnly: modCompileOnly schickt
         // das Jar durch Looms Remapper, und der scheitert an OneConfig 1.2.2

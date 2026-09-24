@@ -33,7 +33,7 @@ public class VisualOneConfig extends Config {
     @Switch(title = "Mini-Me")
     public boolean miniMe = false;
 
-    @Slider(title = "Mini-Me Groesse", min = 10f, max = 90f, step = 5f)
+    @Slider(title = "Mini-Me Groesse", min = 15f, max = 80f, step = 5f)
     public float miniMeSize = 35f;
 
     public VisualOneConfig() {
@@ -41,16 +41,16 @@ public class VisualOneConfig extends Config {
         // die Methode ist intern. Der Konstruktor reicht.
         super("visualclient.json", "Visual Client", Category.QOL);
         vonVConfig();
-        addCallback("fullbright", () -> uebernehmen());
-        addCallback("coords", () -> uebernehmen());
-        addCallback("cps", () -> uebernehmen());
-        addCallback("hitmarker", () -> uebernehmen());
-        addCallback("miniMe", () -> uebernehmen());
-        addCallback("miniMeSize", () -> uebernehmen());
+        addCallback("fullbright", () -> { VConfig.get().fullbright = fullbright; VConfig.save(); });
+        addCallback("coords", () -> { VConfig.get().coords = coords; VConfig.save(); });
+        addCallback("cps", () -> { VConfig.get().cps = cps; VConfig.save(); });
+        addCallback("hitmarker", () -> { VConfig.get().hitmarker = hitmarker; VConfig.save(); });
+        addCallback("miniMe", () -> { VConfig.get().miniMe = miniMe; VConfig.save(); });
+        addCallback("miniMeSize", () -> { VConfig.get().miniMeSize = Math.max(15, Math.min(80, Math.round(miniMeSize))); VConfig.save(); });
     }
 
     /** Startwerte aus unserer eigenen Konfiguration holen. */
-    private void vonVConfig() {
+    public void vonVConfig() {
         VConfig c = VConfig.get();
         fullbright = c.fullbright;
         coords = c.coords;
@@ -60,15 +60,19 @@ public class VisualOneConfig extends Config {
         miniMeSize = c.miniMeSize;
     }
 
-    /** Aenderungen zurueck in unsere Konfiguration schreiben. */
-    private void uebernehmen() {
-        VConfig c = VConfig.get();
-        c.fullbright = fullbright;
-        c.coords = coords;
-        c.cps = cps;
-        c.hitmarker = hitmarker;
-        c.miniMe = miniMe;
-        c.miniMeSize = Math.round(miniMeSize);
-        VConfig.save();
+    @org.polyfrost.oneconfig.api.config.v1.annotations.Button(title = "Alle Client-Module")
+    public void modules() {
+        net.minecraft.client.MinecraftClient.getInstance().setScreen(dev.visual.fabric.ui.VisualHomeScreen.eigeneModule());
+    }
+
+    @org.polyfrost.oneconfig.api.config.v1.annotations.Button(title = "Cosmetics und Mini-Me")
+    public void cosmetics() {
+        net.minecraft.client.MinecraftClient.getInstance().setScreen(dev.visual.fabric.ui.VisualCosmeticsScreen.oeffnen());
+    }
+
+    @org.polyfrost.oneconfig.api.config.v1.annotations.Button(title = "HUD bearbeiten")
+    public void hud() {
+        var mc = net.minecraft.client.MinecraftClient.getInstance();
+        mc.setScreen(new HudEditorScreen(mc.currentScreen));
     }
 }

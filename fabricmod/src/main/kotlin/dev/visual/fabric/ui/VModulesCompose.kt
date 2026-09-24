@@ -56,6 +56,8 @@ import org.polyfrost.oneconfig.internal.ui.themes.Theme
  * Loest {@link VisualHomeScreen} ab, der als Rueckfall bleibt.
  */
 class VModulesScreen : ComposeScreen() {
+    private var selected by mutableStateOf<VModule?>(null)
+
 
     private companion object {
         const val ICO = "/assets/visualsfabric/ico/"
@@ -122,6 +124,7 @@ class VModulesScreen : ComposeScreen() {
      * Bildschirm mehr, und man haengt fest. Genau das ist passiert.
      */
     override fun close() {
+        if (selected != null) { selected = null; return }
         val client = MinecraftClient.getInstance()
         if (client.world == null) {
             client.setScreen(VisualTitleScreen.oeffnen())
@@ -205,6 +208,7 @@ class VModulesScreen : ComposeScreen() {
                 mc.setScreen(ModBrowserScreen(this@VModulesScreen, "mod"))
             }
             Box(Modifier.weight(1f))
+            Text("Powered by OneConfig", color = theme.textColorSecondary, fontSize = (e.value * 0.24f).sp)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     ICO + "onboarding-account.svg", color = theme.textColor,
@@ -250,9 +254,9 @@ class VModulesScreen : ComposeScreen() {
                 .padding(horizontal = e * 0.3f),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(ICO + symbol + ".svg", color = theme.textColor, modifier = Modifier.size(e * 0.5f))
+            Icon(ICO + symbol + ".svg", color = if (aktiv) theme.pageBackground else theme.textColor, modifier = Modifier.size(e * 0.5f))
             Text(
-                titel, color = theme.textColor, fontSize = (e.value * 0.36f).sp,
+                titel, color = if (aktiv) theme.pageBackground else theme.textColor, fontSize = (e.value * 0.36f).sp,
                 modifier = Modifier.padding(start = e * 0.3f)
             )
         }
@@ -261,6 +265,15 @@ class VModulesScreen : ComposeScreen() {
     @Composable
     private fun Inhalt(e: Dp) {
         val theme = LocalTheme.current
+        val detail = selected
+        if (detail != null) {
+            Column(Modifier.fillMaxSize().padding(e * 0.6f)) {
+                org.polyfrost.oneconfig.internal.ui.components.IconButton(
+                    ICO + "arrow-left.svg", Modifier.size(e * 0.75f)) { selected = null }
+                ModuleOptions(detail, e, Modifier.fillMaxWidth().weight(1f))
+            }
+            return
+        }
         var rubrik by remember { mutableStateOf("alle") }
         val sichtbar = remember(rubrik) {
             if (rubrik == "alle") module
@@ -292,7 +305,7 @@ class VModulesScreen : ComposeScreen() {
                 verticalArrangement = Arrangement.spacedBy(e * 0.3f),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(sichtbar) { m -> Kachel(m, e) }
+                items(sichtbar, key = { it.id }) { m -> Kachel(m, e) }
             }
         }
     }
@@ -309,7 +322,7 @@ class VModulesScreen : ComposeScreen() {
                 .onClick(quelle, tun)
                 .padding(horizontal = e * 0.4f, vertical = e * 0.16f)
         ) {
-            Text(name, color = theme.textColor, fontSize = (e.value * 0.32f).sp)
+            Text(name, color = if (aktiv) theme.pageBackground else theme.textColor, fontSize = (e.value * 0.32f).sp)
         }
     }
 
@@ -330,7 +343,7 @@ class VModulesScreen : ComposeScreen() {
         }
         Column(
             modifier = Modifier
-                .height(e * 2.8f)
+                .height(e * 3.8f)
                 .clip(form)
                 .background(theme.modCardBackground)
                 .border(
@@ -339,14 +352,20 @@ class VModulesScreen : ComposeScreen() {
                     form
                 )
                 .onClick(quelle) {
-                    an = !an
-                    runCatching { m.setEnabled.accept(an) }
+                    if (m.action != null) m.action.run()
+                    else selected = m
                 }
                 .padding(e * 0.3f),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             Icon(symbolFuer(m.id), color = theme.textColor, modifier = Modifier.size(e * 0.85f))
+            if (m.enabled != null && m.setEnabled != null) {
+                org.polyfrost.oneconfig.internal.ui.components.settings.SwitchControl(an) {
+                    an = it
+                    m.setEnabled.accept(it)
+                }
+            }
             Text(
                 m.title, color = theme.textColor,
                 fontSize = (e.value * 0.32f).sp,

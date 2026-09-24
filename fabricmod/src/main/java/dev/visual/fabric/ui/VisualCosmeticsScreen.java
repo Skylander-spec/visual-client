@@ -77,6 +77,7 @@ public class VisualCosmeticsScreen extends VMouseScreen {
     private String angelegt;
     private int gewaehlt = 0;
     private int scroll = 0;
+    private final Spiegel spiegel = new Spiegel();
 
     public VisualCosmeticsScreen() {
         super(Text.literal("Visual Client"));
@@ -352,7 +353,8 @@ public class VisualCosmeticsScreen extends VMouseScreen {
         VStyle.roundRect(ctx, x, y, b, h, VStyle.R_SMALL, 0x14FFFFFF);
         VStyle.roundOutline(ctx, x, y, b, h, VStyle.R_SMALL, 0x14FFFFFF);
 
-        VAvatar.zeichne(ctx, x + b / 2, y + Math.round(h * 0.16f), Math.round(h * 0.62f));
+        spiegel.zeichne(ctx, x, y + Math.round(h * 0.16f), x + b,
+                y + Math.round(h * 0.78f), 0, 0, 0f);
 
         String name = MinecraftClient.getInstance().getSession().getUsername();
         VFont.zeichneMittig(ctx, textRenderer, name, x + b / 2,

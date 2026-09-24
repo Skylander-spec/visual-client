@@ -28,26 +28,27 @@ import net.minecraft.util.Identifier;
  * Haltung, und genau die war gewuenscht.
  */
 public final class MiniPuppe {
-    private static PlayerEntityModel modell;
-    private static boolean modellSchlank;
-    private static final PlayerEntityRenderState EIGEN = new PlayerEntityRenderState();
-
-    private MiniPuppe() {
+    private static final java.util.Map<PlayerEntityRenderState, MiniState> STATES = new java.util.WeakHashMap<>();
+    private static final PlayerEntityModel[] MODELS = new PlayerEntityModel[2];
+    private static final class MiniState extends PlayerEntityRenderState {
+        boolean seated;
+        float step, movement;
     }
+    private MiniPuppe() { }
 
-    private static PlayerEntityModel modell(boolean schlank) {
-        if (modell == null || modellSchlank != schlank) {
-            // Das Modell wird selbst gebaut statt ueber EntityModelLayers:
-            // dort tragen zwei verschiedene Felder den Namen PLAYER_SLIM
-            // (Modell und Ausruestung), das laesst sich im Quelltext nicht
-            // aufloesen. getTexturedModelData nimmt den Schlank-Schalter
-            // ohnehin direkt entgegen.
-            modell = new PlayerEntityModel(TexturedModelData
-                    .of(PlayerEntityModel.getTexturedModelData(Dilation.NONE, schlank), 64, 64)
-                    .createModel(), schlank);
-            modellSchlank = schlank;
+    private static PlayerEntityModel modell(boolean slim) {
+        int index = slim ? 1 : 0;
+        if (MODELS[index] == null) {
+            MODELS[index] = new PlayerEntityModel(TexturedModelData
+                    .of(PlayerEntityModel.getTexturedModelData(Dilation.NONE, slim), 64, 64)
+                    .createModel(), slim) {
+                @Override public void setAngles(PlayerEntityRenderState state) {
+                    super.setAngles(state);
+                    if (state instanceof MiniState mini) haltung(this, mini);
+                }
+            };
         }
-        return modell;
+        return MODELS[index];
     }
 
     /** Zeichnet den Kleinen an der Stelle, auf die die Matrix schon zeigt. */
@@ -58,7 +59,12 @@ public final class MiniPuppe {
                     && quelle.skinTextures.model() == net.minecraft.entity.player.PlayerSkinType.SLIM;
             PlayerEntityModel m = modell(schlank);
 
-            // Nur uebernehmen, was das Modell selbst liest
+            // Deferred rendering needs a separate pose snapshot for every player.
+            MiniState EIGEN = STATES.computeIfAbsent(quelle, key -> new MiniState());
+            EIGEN.seated = dev.visual.fabric.MiniMe.sitzt();
+            EIGEN.step = dev.visual.fabric.MiniMe.schritt();
+            EIGEN.movement = dev.visual.fabric.MiniMe.bewegung();
+            EIGEN.age = quelle.age;
             EIGEN.skinTextures = quelle.skinTextures;
             EIGEN.hatVisible = quelle.hatVisible;
             EIGEN.jacketVisible = quelle.jacketVisible;
@@ -68,10 +74,8 @@ public final class MiniPuppe {
             EIGEN.rightPantsLegVisible = quelle.rightPantsLegVisible;
             EIGEN.baseScale = 1.0f;
 
-            m.setAngles(EIGEN);
-            haltung(m, quelle);
 
-            Identifier haut = MiniSkin.textur();
+            Identifier haut = dev.visual.fabric.MiniMe.skin();
             if (haut == null && quelle.skinTextures != null) {
                 haut = quelle.skinTextures.body().texturePath();
             }
@@ -83,6 +87,8 @@ public final class MiniPuppe {
             // dort, wohin die Matrix zeigt.
             matrizen.push();
             try {
+                matrizen.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_Y.rotationDegrees(
+                        dev.visual.fabric.MiniAnimation.modelYaw(quelle.bodyYaw)));
                 matrizen.scale(-1.0f, -1.0f, 1.0f);
                 matrizen.translate(0.0f, -1.501f, 0.0f);
                 schlange.submitModel(m, EIGEN, matrizen, m.getLayer(haut), licht,
@@ -99,40 +105,7 @@ public final class MiniPuppe {
      * Unsere eigene Haltung. Sitzend streckt er die Beine nach vorn und legt
      * die Arme dazwischen; stehend laeuft er mit, wenn er hinterherlaeuft.
      */
-    private static void haltung(PlayerEntityModel m, PlayerEntityRenderState quelle) {
-        VConfig c = VConfig.get();
-        boolean sitzt = c.miniMeSitzt && c.miniMePos != 3;
-
-        if (sitzt) {
-            // Beine waagerecht nach vorn
-            m.rightLeg.pitch = -1.55f;
-            m.leftLeg.pitch = -1.55f;
-            m.rightLeg.yaw = 0.12f;
-            m.leftLeg.yaw = -0.12f;
-            m.rightLeg.roll = 0.0f;
-            m.leftLeg.roll = 0.0f;
-            // Arme zwischen den Beinen, leicht nach vorn abgestuetzt
-            m.rightArm.pitch = -0.55f;
-            m.leftArm.pitch = -0.55f;
-            m.rightArm.yaw = 0.0f;
-            m.leftArm.yaw = 0.0f;
-            m.rightArm.roll = 0.22f;
-            m.leftArm.roll = -0.22f;
-            // Kopf leicht geneigt, das macht ihn freundlicher
-            m.head.pitch = 0.14f;
-            m.head.yaw = 0.0f;
-            m.head.roll = 0.10f;
-        } else {
-            // Hinterherlaufen: die Beine schwingen mit dem eigenen Schritt
-            float schritt = quelle.limbSwingAnimationProgress;
-            float staerke = Math.min(0.6f, quelle.limbSwingAmplitude);
-            m.rightLeg.pitch = (float) Math.cos(schritt * 0.6662f) * 1.4f * staerke;
-            m.leftLeg.pitch = (float) Math.cos(schritt * 0.6662f + Math.PI) * 1.4f * staerke;
-            m.rightArm.pitch = (float) Math.cos(schritt * 0.6662f + Math.PI) * 1.4f * staerke;
-            m.leftArm.pitch = (float) Math.cos(schritt * 0.6662f) * 1.4f * staerke;
-            m.head.pitch = 0.0f;
-            m.head.yaw = 0.0f;
-        }
-        m.hat.setAngles(m.head.pitch, m.head.yaw, m.head.roll);
+    private static void haltung(PlayerEntityModel m, MiniState state) {
+        MiniPose.apply(m, state.seated, state.age, state.step, state.movement);
     }
 }

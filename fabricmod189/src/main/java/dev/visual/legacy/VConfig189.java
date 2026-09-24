@@ -13,6 +13,16 @@ import java.util.Properties;
 public final class VConfig189 {
     private static final File FILE = new File("config/visual-189.properties");
     private static final Properties P = new Properties();
+    private static final java.util.concurrent.ScheduledExecutorService WRITER =
+            java.util.concurrent.Executors.newSingleThreadScheduledExecutor(task -> {
+                Thread thread = new Thread(task, "Sky legacy settings");
+                thread.setDaemon(true);
+                return thread;
+            });
+    private static java.util.concurrent.ScheduledFuture<?> pending;
+    private static volatile Properties latest;
+    private static final Object WRITE_LOCK = new Object();
+    static { Runtime.getRuntime().addShutdownHook(new Thread(VConfig189::writeLatest, "Sky legacy settings flush")); }
 
     private VConfig189() {
     }
@@ -30,17 +40,37 @@ public final class VConfig189 {
         }
     }
 
-    public static void save() {
-        FileOutputStream out = null;
-        try {
-            File dir = FILE.getParentFile();
-            if (dir != null && !dir.exists()) dir.mkdirs();
-            out = new FileOutputStream(FILE);
-            P.store(out, "Visual Client 1.8.9");
-        } catch (Exception ignored) {
-            // Nicht schreibbar: Einstellungen gelten nur fuer diese Sitzung
-        } finally {
-            close(out);
+    public static synchronized void save() {
+        Properties snapshot = new Properties();
+        snapshot.putAll(P);
+        latest = snapshot;
+        if (pending != null) pending.cancel(false);
+        pending = WRITER.schedule(VConfig189::writeLatest, 150, java.util.concurrent.TimeUnit.MILLISECONDS);
+    }
+
+    private static void writeLatest() {
+        synchronized (WRITE_LOCK) {
+            Properties snapshot = latest;
+            if (snapshot == null) return;
+            java.nio.file.Path temporary = null;
+            try {
+                java.nio.file.Path target = FILE.toPath().toAbsolutePath();
+                java.nio.file.Files.createDirectories(target.getParent());
+                temporary = java.nio.file.Files.createTempFile(target.getParent(), "visual-settings-", ".tmp");
+                try (java.io.OutputStream output = java.nio.file.Files.newOutputStream(temporary)) {
+                    snapshot.store(output, "Visual Client 1.8.9");
+                }
+                try {
+                    java.nio.file.Files.move(temporary, target, java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                            java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                } catch (java.nio.file.AtomicMoveNotSupportedException unsupported) {
+                    java.nio.file.Files.move(temporary, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                }
+            } catch (java.io.IOException error) {
+                System.err.println("[Sky] Settings could not be saved: " + error.getClass().getSimpleName());
+            } finally {
+                if (temporary != null) try { java.nio.file.Files.deleteIfExists(temporary); } catch (java.io.IOException ignored) { }
+            }
         }
     }
 

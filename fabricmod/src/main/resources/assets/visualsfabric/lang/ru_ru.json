@@ -202,5 +202,17 @@
   "vc.val.rightshoulder": "Правое плечо",
   "vc.val.sunset": "Закат",
   "vc.val.white": "Белый",
-  "vc.val.yellow": "Жёлтый"
+  "vc.val.yellow": "Жёлтый",
+  "vc.set.companion": "Спутник",
+  "vc.ui.loading": "Загрузка плащей …",
+  "vc.ui.loadfailed": "Не удалось загрузить плащи.",
+  "vc.ui.equipfailed": "Не удалось надеть плащ.",
+  "vc.val.crystaldragon": "Кристальный дракон",
+  "vc.val.cloudspirit": "Облачный дух",
+  "vc.ui.syncUnconfigured": "Онлайн-косметика ещё не настроена",
+  "vc.ui.syncConnecting": "Подключение косметики …",
+  "vc.ui.syncConnected": "Косметика доступна другим",
+  "vc.ui.syncUnavailable": "Косметика сейчас только локально",
+  "vc.ui.syncLogin": "Войдите через Microsoft для синхронизации",
+  "vc.ui.addserver": "Добавить сервер"
 }

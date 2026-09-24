@@ -213,6 +213,12 @@ public final class ModuleRegistry {
         list.add(new VModule("minime", "☗", VText.t("mod.minime"),
                 VText.t("mod.minime.d"),
                 () -> c.miniMe, v -> set(() -> c.miniMe = v))
+                .add(new VSetting.Action(VText.t("set.companion"),
+                        () -> MinecraftClient.getInstance().setScreen(CompanionPicker.open()), () -> 0xFFA6C8FF))
+                .add(new VSetting.Stepper(VText.t("pet.travel"),
+                        () -> VText.t(new String[]{"pet.auto", "pet.walk", "pet.fly"}[Math.floorMod(c.miniMeFlight, 3)]),
+                        () -> set(() -> c.miniMeFlight = Math.floorMod(c.miniMeFlight - 1, 3)),
+                        () -> set(() -> c.miniMeFlight = (c.miniMeFlight + 1) % 3)))
                 .add(new VSetting.Stepper(VText.t("set.seat"),
                         () -> VText.t(MINI_POS[c.miniMePos]),
                         () -> set(() -> c.miniMePos =
@@ -230,6 +236,16 @@ public final class ModuleRegistry {
                                         % MiniMe.HUT_NAMEN.length),
                         () -> set(() -> c.miniMeHut =
                                 (c.miniMeHut + 1) % MiniMe.HUT_NAMEN.length)))
+                .add(new VSetting.Stepper(VText.t("pet.scarf"),
+                        () -> VText.t(new String[]{"val.nohat", "pet.pink", "pet.blue", "pet.mint"}[Math.floorMod(c.miniMeScarf,4)]),
+                        () -> set(() -> c.miniMeScarf = Math.floorMod(c.miniMeScarf-1,4)),
+                        () -> set(() -> c.miniMeScarf = (c.miniMeScarf+1)%4)))
+                .add(new VSetting.Stepper(VText.t("pet.shoes"),
+                        () -> VText.t(new String[]{"val.nohat", "pet.pink", "pet.blue", "pet.bunnyslippers"}[Math.floorMod(c.miniMeShoes,4)]),
+                        () -> set(() -> c.miniMeShoes = Math.floorMod(c.miniMeShoes-1,4)),
+                        () -> set(() -> c.miniMeShoes = (c.miniMeShoes+1)%4)))
+                .add(new VSetting.Action(VText.t("pet.importskin"), dev.visual.fabric.MiniSkin::importFile, () -> 0xFFA6C8FF))
+                .add(new VSetting.Info(VText.t("pet.importstatus"), dev.visual.fabric.MiniSkin::importStatus))
                 .add(new VSetting.Toggle(VText.t("set.wings"), () -> c.miniMeFluegel,
                         v -> set(() -> c.miniMeFluegel = v)))
                 .add(new VSetting.Stepper(VText.t("set.ownskin"),

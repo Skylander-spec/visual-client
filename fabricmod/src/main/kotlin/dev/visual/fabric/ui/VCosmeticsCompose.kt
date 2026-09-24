@@ -27,6 +27,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.ClipOp
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.loadImageBitmap
@@ -63,7 +66,8 @@ import java.nio.file.Path
  * Umhaenge, Mini-Me und Accessoires stehen in Rubriken nebeneinander
  * statt auf mehreren Bildschirmen verteilt, mit dem Spiegel daneben.
  */
-class VCosmeticsScreen : ComposeScreen() {
+class VCosmeticsScreen @JvmOverloads constructor(private val openPicker: Boolean = false) : ComposeScreen() {
+    private var picking by mutableStateOf(openPicker)
 
     /**
      * ESC fuehrt zurueck, nicht ins Nichts.
@@ -73,6 +77,7 @@ class VCosmeticsScreen : ComposeScreen() {
      * Bildschirm mehr, und man haengt fest. Genau das ist passiert.
      */
     override fun close() {
+        if (picking) { picking = false; return }
         val client = MinecraftClient.getInstance()
         if (client.world == null) {
             client.setScreen(VisualTitleScreen.oeffnen())
@@ -81,33 +86,27 @@ class VCosmeticsScreen : ComposeScreen() {
         }
     }
 
-    /** Ein Eintrag im Raster. Das Bild bleibt roh, damit Compose es laden kann. */
-    private class Stueck(val name: String, val png: ByteArray?)
+    private class Stueck(val name: String, val bild: androidx.compose.ui.graphics.ImageBitmap?)
+    private var umhaenge by mutableStateOf<List<Stueck>>(emptyList())
+    private var syncStatus by mutableStateOf(dev.visual.fabric.CosmeticsSync.status())
+    private var laden by mutableStateOf(true)
+    private var meldung by mutableStateOf("")
+    private var gewaehlt by mutableStateOf(CapeManager.angelegt() ?: "")
+    private var anlegen by mutableStateOf(false)
+    private val spiegel = Spiegel()
+    private val minime by lazy { ModuleRegistry.all(this).first { it.id == "minime" } }
 
-    /**
-     * Die Dateien einmal beim ersten Zugriff lesen.
-     *
-     * Bewusst nicht in compose(): das laeuft pro Bild, und von der Platte
-     * zu lesen wuerde dabei jedes Mal stocken.
-     */
-    private val umhaenge: List<Stueck> by lazy { lesen("capes") }
-    private val accessoires: List<Stueck> by lazy { lesen("accessoires") }
-
-    private fun lesen(unterordner: String): List<Stueck> {
-        val ordner: Path = CapeManager.datenOrdner().resolve(unterordner)
-        if (!Files.isDirectory(ordner)) return emptyList()
-        return try {
-            Files.list(ordner).use { liste ->
-                liste.toList()
-                    .filter { it.fileName.toString().endsWith(".png", ignoreCase = true) }
-                    .sortedBy { it.fileName.toString().lowercase() }
-                    .map { pfad ->
-                        val name = pfad.fileName.toString().removeSuffix(".png")
-                        Stueck(name, runCatching { Files.readAllBytes(pfad) }.getOrNull())
-                    }
+    init {
+        dev.visual.fabric.CapeLibrary.load().thenApplyAsync { entries ->
+            entries.map { entry -> Stueck(entry.name(), runCatching {
+                loadImageBitmap(ByteArrayInputStream(entry.png()))
+            }.getOrNull()) }
+        }.whenComplete { entries, error ->
+            MinecraftClient.getInstance().execute {
+                laden = false
+                if (error != null) meldung = VText.t("ui.loadfailed")
+                else umhaenge = entries
             }
-        } catch (fehler: Throwable) {
-            emptyList()
         }
     }
 
@@ -122,8 +121,8 @@ class VCosmeticsScreen : ComposeScreen() {
     @Composable
     private fun inhalt() {
         val theme = LocalTheme.current
-        var rubrik by remember { mutableStateOf("umhaenge") }
-        var gewaehlt by remember { mutableStateOf(CapeManager.angelegt() ?: "") }
+        var rubrik by remember { mutableStateOf(if (openPicker) "minime" else "umhaenge") }
+
 
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             val e = maxHeight * 0.042f
@@ -135,7 +134,13 @@ class VCosmeticsScreen : ComposeScreen() {
                     .fillMaxWidth(0.80f)
                     .fillMaxHeight(0.78f)
                     .clip(form)
-                    .background(theme.pageBackground)
+                    .drawBehind {
+                        // OneConfig's GL overlay is composited after Minecraft's 3D GUI.
+                        // Leave a real transparent viewport so it cannot cover the model.
+                        clipRect(left = e.toPx() * 0.5f, top = e.toPx() * 1.8f,
+                            right = e.toPx() * 6.9f, bottom = size.height - e.toPx() * 1.7f,
+                            clipOp = ClipOp.Difference) { drawRect(theme.pageBackground) }
+                    }
                     .border(1.dp, theme.borderColor, form)
                     .padding(e * 0.5f),
                 horizontalArrangement = Arrangement.spacedBy(e * 0.5f)
@@ -152,18 +157,29 @@ class VCosmeticsScreen : ComposeScreen() {
                     ) {
                         for ((schluessel, name) in listOf(
                             "umhaenge" to VText.t("ui.capes"),
-                            "minime" to VText.t("mod.minime"),
-                            "accessoires" to VText.t("ui.accessoires")
+                            "minime" to VText.t("mod.minime")
                         )) {
                             Chip(name, rubrik == schluessel, e) { rubrik = schluessel }
                         }
                     }
+                    Text(VText.t(syncStatus), color = theme.textColorSecondary, fontSize = (e.value * 0.27f).sp)
+                    if (meldung.isNotEmpty()) Text(meldung, color = theme.textColorSecondary)
                     when (rubrik) {
-                        "minime" -> Hinweis(VText.t("ui.minimehint"), e)
-                        "accessoires" ->
-                            if (accessoires.isEmpty()) Hinweis(VText.t("ui.accsoon"), e)
-                            else Raster(accessoires, gewaehlt, e) { gewaehlt = it }
-                        else -> Raster(umhaenge, gewaehlt, e) { gewaehlt = it }
+                        "minime" -> if (picking) CompanionGallery(e) { picking = false }
+                            else ModuleOptions(minime, e, Modifier.fillMaxSize())
+                        else -> if (laden) Hinweis(VText.t("ui.loading"), e)
+                            else Raster(umhaenge, gewaehlt, e) { neu ->
+                                if (!anlegen) {
+                                    anlegen = true
+                                    dev.visual.fabric.CapeLibrary.equip(neu.ifEmpty { null }).whenComplete { _, error ->
+                                        MinecraftClient.getInstance().execute {
+                                            anlegen = false
+                                            if (error == null) { gewaehlt = neu; meldung = "" }
+                                            else meldung = VText.t("ui.equipfailed")
+                                        }
+                                    }
+                                }
+                            }
                     }
                 }
             }
@@ -186,7 +202,6 @@ class VCosmeticsScreen : ComposeScreen() {
                 .width(e * 6.4f)
                 .fillMaxHeight()
                 .clip(form)
-                .background(theme.modCardBackground)
                 .border(1.dp, theme.borderColor, form)
                 .padding(e * 0.4f),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -200,6 +215,7 @@ class VCosmeticsScreen : ComposeScreen() {
             // ueber die Compose-Ebene, siehe render(). Compose selbst kann
             // keine Minecraft-Figur zeichnen.
             Box(modifier = Modifier.fillMaxWidth().weight(1f))
+            Text("Powered by OneConfig", color = theme.textColorSecondary, fontSize = (e.value * 0.24f).sp)
             Text(
                 if (gewaehlt.isEmpty()) VText.t("ui.nothingworn") else gewaehlt,
                 color = theme.textColorSecondary,
@@ -220,48 +236,19 @@ class VCosmeticsScreen : ComposeScreen() {
      * die Puppe aus derselben Skin-Textur.
      */
     override fun render(ctx: net.minecraft.client.gui.DrawContext, mausX: Int, mausY: Int, delta: Float) {
-        super.render(ctx, mausX, mausY, delta)
-        // Compose hinterlaesst eine Transformation auf dem Matrix-Stapel.
-        // Ohne eigenen Rahmen zeichnet alles Folgende darin - die Figur
-        // landete dadurch weit oberhalb des Spiegels, ausserhalb des
-        // Fensters. Push/pop stellt den Ursprung wieder her.
+        syncStatus = dev.visual.fabric.CosmeticsSync.status()
+        // Restore the incoming matrix around Compose, before drawing Minecraft's model.
         Compat.matrixAuf(ctx)
-        try {
-            val e = height * 0.042f
-            val feldB = width * 0.80f
-            val feldH = height * 0.78f
-            val feldL = (width - feldB) / 2f
-            val feldO = (height - feldH) / 2f
-            val spiegelL = feldL + e * 0.5f
-            val spiegelB = e * 6.4f
-            val spiegelO = feldO + e * 0.5f
-            val spiegelH = feldH - e
-
-            // Zwischen Ueberschrift und Namenszeile
-            val oben = (spiegelO + e * 1.5f).toInt()
-            val unten = (spiegelO + spiegelH - e * 1.2f).toInt()
-            val mitteX = (spiegelL + spiegelB / 2f).toInt()
-            if (unten - oben < 8) return
-
-            val spieler = MinecraftClient.getInstance().player
-            if (spieler != null) {
-                val groesse = ((unten - oben) / 2.4f).toInt().coerceAtLeast(1)
-                net.minecraft.client.gui.screen.ingame.InventoryScreen.drawEntity(
-                    ctx,
-                    mitteX - spiegelB.toInt() / 3, oben,
-                    mitteX + spiegelB.toInt() / 3, unten,
-                    groesse, 0.0625f,
-                    mausX.toFloat(), mausY.toFloat(),
-                    spieler
-                )
-            } else {
-                VAvatar.zeichne(ctx, mitteX, oben, unten - oben)
-            }
-        } catch (fehler: Throwable) {
-            // Lieber ein leerer Spiegel als ein toter Bildschirm
-        } finally {
-            Compat.matrixZu(ctx)
-        }
+        try { super.render(ctx, mausX, mausY, delta) }
+        finally { Compat.matrixZu(ctx) }
+        Compat.foreground(ctx)
+        val e = height * 0.042f
+        val left = width * 0.10f + e * 0.5f
+        val top = height * 0.11f + e * 2f
+        val bottom = height * 0.89f - e * 1.7f
+        ctx.fill(left.toInt(), top.toInt(), (left + e * 6.4f).toInt(), bottom.toInt(), 0xFF161F26.toInt())
+        spiegel.zeichne(ctx, left.toInt(), top.toInt(), (left + e * 6.4f).toInt(),
+            bottom.toInt(), mausX, mausY, delta)
     }
 
     @Composable
@@ -285,11 +272,11 @@ class VCosmeticsScreen : ComposeScreen() {
             verticalArrangement = Arrangement.spacedBy(e * 0.3f),
             modifier = Modifier.fillMaxSize()
         ) {
-            items(liste) { stueck ->
+            items(liste, key = { it.name }) { stueck ->
                 Karte(stueck, stueck.name == gewaehlt, e) {
                     val neu = if (stueck.name == gewaehlt) "" else stueck.name
                     waehlen(neu)
-                    runCatching { CapeManager.anlegen(neu) }
+
                 }
             }
         }
@@ -307,7 +294,7 @@ class VCosmeticsScreen : ComposeScreen() {
                 .onClick(quelle, tun)
                 .padding(horizontal = e * 0.4f, vertical = e * 0.16f)
         ) {
-            Text(name, color = theme.textColor, fontSize = (e.value * 0.32f).sp)
+            Text(name, color = if (aktiv) theme.pageBackground else theme.textColor, fontSize = (e.value * 0.32f).sp)
         }
     }
 
@@ -331,7 +318,7 @@ class VCosmeticsScreen : ComposeScreen() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(e * 0.2f)
         ) {
-            Vorschau(stueck.png, Modifier.weight(1f).aspectRatio(10f / 16f), e)
+            Vorschau(stueck.bild, Modifier.weight(1f).aspectRatio(10f / 16f), e)
             Text(stueck.name, color = theme.textColor, fontSize = (e.value * 0.3f).sp)
         }
     }
@@ -346,12 +333,9 @@ class VCosmeticsScreen : ComposeScreen() {
      * nicht den Bildschirm mitnehmen.
      */
     @Composable
-    private fun Vorschau(png: ByteArray?, modifier: Modifier, e: Dp) {
+    private fun Vorschau(bild: androidx.compose.ui.graphics.ImageBitmap?, modifier: Modifier, e: Dp) {
         val theme = LocalTheme.current
         val form = RoundedCornerShape(e * 0.2f)
-        val bild = remember(png) {
-            png?.let { runCatching { loadImageBitmap(ByteArrayInputStream(it)) }.getOrNull() }
-        }
         if (bild == null) {
             Box(modifier.clip(form).background(theme.componentBackground))
             return

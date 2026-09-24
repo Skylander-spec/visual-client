@@ -145,4 +145,32 @@ public final class Compat {
     public static void matrixZu(net.minecraft.client.gui.DrawContext ctx) {
         ctx.getMatrices().popMatrix();
     }
+    public static void foreground(DrawContext ctx) { ctx.createNewRootLayer(); }
+
+    /**
+     * Minecrafts eigene 3D-Skin-Vorschau bauen.
+     *
+     * Der dritte Parameter von PlayerSkinWidget heisst je nach Fassung
+     * anders: bis 1.21.3 ein EntityModelLoader ueber
+     * getEntityModelLoader(), ab 1.21.4 LoadedEntityModels ueber
+     * getLoadedEntityModels(). Deshalb steht der Aufruf hier und nicht
+     * im gemeinsamen Quelltext - dort liess er den Bau fuer 1.21.2 und
+     * 1.21.3 scheitern.
+     */
+    public static net.minecraft.client.gui.widget.PlayerSkinWidget spiegelWidget(int breite, int hoehe) {
+        var mc = net.minecraft.client.MinecraftClient.getInstance();
+        var fallback = net.minecraft.client.util.DefaultSkinHelper.getSkinTextures(mc.getGameProfile());
+        var request = mc.getSkinProvider().fetchSkinTextures(mc.getGameProfile()).exceptionally(error -> java.util.Optional.empty());
+        var skin = (java.util.function.Supplier<net.minecraft.client.util.SkinTextures>) () -> request.getNow(java.util.Optional.empty()).orElse(fallback);
+        return new net.minecraft.client.gui.widget.PlayerSkinWidget(breite, hoehe, mc.getLoadedEntityModels(), skin);
+    }
+
+    /** OneConfig 1.0.x's avatar worker must find an already uploaded texture. */
+    public static void prepareMenuSkin() {
+        var mc = MinecraftClient.getInstance();
+        var fallback = net.minecraft.client.util.DefaultSkinHelper.getSkinTextures(mc.getGameProfile()).texture();
+        mc.getTextureManager().getTexture(fallback);
+        var selected = spielerHaut();
+        if (selected != null) mc.getTextureManager().getTexture(selected);
+    }
 }

@@ -8,24 +8,7 @@ import net.minecraft.item.Items;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.RotationAxis;
 
-/**
- * Mini-Me: eine verkleinerte Ausgabe des eigenen Spielers, die auf dem Kopf
- * oder einer Schulter mitreitet.
- *
- * Gezeichnet wird nicht etwa ein nachgebautes Modell, sondern derselbe
- * Renderer noch einmal — mit verschobener und verkleinerter Matrix. Dadurch
- * bekommt der Kleine automatisch Skin, Cape, Rüstung, Gegenstand in der Hand
- * und dieselbe Pose wie das Original, ohne dass hier irgendetwas davon
- * nachgepflegt werden müsste. Der Preis ist die Rekursion, gegen die
- * {@link #beginnen} sichert.
- *
- * Für den Durchgang des Kleinen wird der Render-Zustand kurz umgestellt:
- * eigener Skin, Hut auf dem Kopf, Elytren als Flügel. Danach stellt
- * {@link #ausziehen} alles zurück, sonst trüge das Original die Sachen mit.
- *
- * Nur der eigene Spieler bekommt ihn: es ist eine lokale Kosmetik, andere
- * sehen sie ohnehin nicht.
- */
+/** Cosmetic companions for the owning player, with independent pose and terrain navigation. */
 public final class MiniMe {
     /** Höhe des Spielermodells in Blöcken — Bezug für alle Sitzplätze. */
     private static final float GROESSE = 1.8f;
@@ -49,11 +32,37 @@ public final class MiniMe {
     /** Sprachschlüssel je Hut, gleiche Reihenfolge. */
     public static final String[] HUT_NAMEN = {
             "val.nohat", "val.hat.gold", "val.hat.turtle", "val.hat.pumpkin",
-            "val.hat.cake", "val.hat.flower", "val.hat.dragon"
+            "val.hat.cake", "val.hat.flower", "val.hat.dragon", "pet.beanie", "pet.catears", "pet.bunnyears"
     };
 
     private static boolean zeichnet = false;
-    private static Object eigenerZustand = null;
+    private static int previewDepth;
+    public static void beginPreview() { previewDepth++; }
+    public static void endPreview() { previewDepth = Math.max(0, previewDepth - 1); }
+    private static final java.util.Map<Object, Owner> OWNERS = new java.util.WeakHashMap<>();
+    private static final java.util.Map<java.util.UUID, CompanionMotion> FOLLOW = new java.util.HashMap<>();
+    private record Owner(java.util.UUID uuid, VConfig config, float delta) {}
+    private static Owner owner;
+    private static Object currentState;
+    private static Object world;
+    private static final java.util.Set<java.util.UUID> PRESENT = new java.util.HashSet<>();
+
+    public static VConfig config() { return owner == null ? VConfig.get() : owner.config; }
+    public static java.util.UUID ownerId() { return owner == null ? null : owner.uuid; }
+    public static Identifier skin() {
+        var mc = net.minecraft.client.MinecraftClient.getInstance();
+        return owner == null || (mc.player != null && owner.uuid.equals(mc.player.getUuid()))
+                ? MiniSkin.textur() : CosmeticsSync.skin(owner.uuid);
+    }
+    public static float schritt() {
+        CompanionMotion f = owner == null ? null : FOLLOW.get(owner.uuid);
+        return f == null ? 0f : f.step;
+    }
+    public static float bewegung() {
+        CompanionMotion f = owner == null ? null : FOLLOW.get(owner.uuid);
+        return f == null || config().miniMePos != 3 ? 0f : f.movement;
+    }
+
 
     /** Zwischenspeicher, um den Zustand nach dem Durchgang herzustellen. */
     private static Object skinVorher = null;
@@ -67,23 +76,14 @@ public final class MiniMe {
     /** Ab dieser Entfernung wird nicht mehr gelaufen, sondern aufgeholt. */
     private static final double ZU_WEIT = 8.0;
 
-    private static double folgeX;
-    private static double folgeY;
-    private static double folgeZ;
-    private static float folgeGier;
-    private static boolean folgeBereit = false;
-
     private MiniMe() {
     }
 
-    /** Beim Befüllen des Render-Zustands aufrufen. */
-    public static void merken(Object zustand, boolean selbst) {
-        if (selbst) eigenerZustand = zustand;
-    }
-
-    /** Gilt dieser Zustand als der eigene Spieler? */
-    public static boolean istEigener(Object zustand) {
-        return zustand != null && zustand == eigenerZustand;
+    /** Called after a player renderer fills its state; works for local and remote players. */
+    public static void merken(Object state, java.util.UUID uuid, float delta) {
+        VConfig c = CosmeticsSync.config(uuid);
+        if (c != null && c.miniMe) OWNERS.put(state, new Owner(uuid, c, Math.max(0f, Math.min(1f, delta))));
+        else OWNERS.remove(state);
     }
 
     /** Läuft gerade der Durchgang des Kleinen? Die Pose fragt das ab. */
@@ -91,8 +91,12 @@ public final class MiniMe {
         return zeichnet;
     }
 
+    public static boolean fliegt(VConfig c) {
+        return c.miniMeFlight == 2 || (c.miniMeFlight == 0 && Begleiter.flying(c.miniMeArt));
+    }
+
     public static boolean sitzt() {
-        return VConfig.get().miniMeSitzt && VConfig.get().miniMePos != 3;
+        return config().miniMeSitzt && config().miniMePos != 3;
     }
 
     /**
@@ -101,14 +105,18 @@ public final class MiniMe {
      */
     public static boolean beginnen(Object zustand) {
         if (zeichnet) return false;
-        if (!VConfig.get().miniMe) return false;
-        if (!istEigener(zustand)) return false;
+        Owner candidate = OWNERS.get(zustand);
+        if (candidate == null || !candidate.config.miniMe) return false;
+        owner = candidate;
+        currentState = zustand;
         zeichnet = true;
         return true;
     }
 
     public static void beenden() {
         zeichnet = false;
+        owner = null;
+        currentState = null;
     }
 
     /**
@@ -120,22 +128,14 @@ public final class MiniMe {
         kopfVorher = null;
         brustVorher = null;
         if (!(roh instanceof PlayerEntityRenderState zustand)) return;
-        VConfig c = VConfig.get();
+        VConfig c = config();
         try {
-            Identifier skin = MiniSkin.textur();
+            Identifier skin = skin();
             if (skin != null) {
                 skinVorher = zustand.skinTextures;
                 Compat.applySkin(zustand, skin);
             }
-            Item hut = c.miniMeHut > 0 && c.miniMeHut < HUETE.length ? HUETE[c.miniMeHut] : null;
-            if (hut != null) {
-                kopfVorher = zustand.equippedHeadStack;
-                zustand.equippedHeadStack = new ItemStack(hut);
-            }
-            if (c.miniMeFluegel) {
-                brustVorher = zustand.equippedChestStack;
-                zustand.equippedChestStack = new ItemStack(Items.ELYTRA);
-            }
+
         } catch (Throwable t) {
             // Lieber ein Kleiner ohne Zubehör als ein zerrissenes Bild
         }
@@ -170,37 +170,42 @@ public final class MiniMe {
      * vorn statt nach unten, sonst schwebte er über der Schulter.
      */
     public static void platzieren(MatrixStack matrizen, float koerperDrehung) {
-        VConfig c = VConfig.get();
+        VConfig c = config();
         float faktor = Math.max(0.1f, Math.min(0.9f, c.miniMeSize / 100f));
-        boolean sitzt = c.miniMeSitzt && c.miniMePos != 3;
-        float sitzAbzug = sitzt ? 0.55f * faktor : 0f;
+        boolean sitzt = c.miniMeArt == 0 && c.miniMeSitzt && c.miniMePos != 3;
+        float sitzAbzug = sitzt ? 0.75f * faktor : 0f;
 
-        matrizen.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-koerperDrehung));
-        switch (c.miniMePos) {
-            // Auf dem Kopf: Füße auf dem Scheitel (Kopf endet bei 1,85)
-            case 0 -> matrizen.translate(0.0f, 1.84f + sitzAbzug, 0.0f);
-            // Auf der Schulter: Füße auf der Oberkante des Arms (1,35) und so
-            // weit nach außen, dass der Kleine den Kopf nicht schneidet — der
-            // Kopf ist 0,25 breit, der Kleine bei 35 % rund 0,18.
-            case 1 -> matrizen.translate(SEITE, 1.35f + sitzAbzug, 0.0f);
-            case 2 -> matrizen.translate(-SEITE, 1.35f + sitzAbzug, 0.0f);
-            // Begleiter: an seiner eigenen, nachgefuehrten Stelle am Boden.
-            // Die Matrix steht am Fusspunkt des Spielers, also genuegt die
-            // Differenz in Weltkoordinaten.
-            default -> {
-                var spieler = net.minecraft.client.MinecraftClient.getInstance().player;
-                if (spieler != null && folgeBereit) {
-                    matrizen.translate(folgeX - spieler.getX(),
-                            folgeY - spieler.getY(),
-                            folgeZ - spieler.getZ());
-                    // Der Kleine bekommt vom Renderer die Drehung des Spielers.
-                    // Diese Vordrehung schiebt sie auf seine eigene um.
-                    matrizen.multiply(RotationAxis.POSITIVE_Y
-                            .rotationDegrees(folgeGier - koerperDrehung));
+        if (c.miniMePos == 3) {
+            var mc = net.minecraft.client.MinecraftClient.getInstance();
+            // GUI previews must keep the companion inside the mirror.
+            if (previewDepth > 0) {
+                matrizen.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-koerperDrehung));
+                matrizen.translate(0.7f, 0f, 0f);
+                matrizen.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(koerperDrehung));
+            } else if (owner != null && currentState instanceof PlayerEntityRenderState state) {
+                CompanionMotion f = FOLLOW.get(owner.uuid);
+                if (f != null && f.ready()) {
+                    double x = f.previousX + (f.x - f.previousX) * owner.delta;
+                    double y = f.previousY + (f.y - f.previousY) * owner.delta;
+                    double z = f.previousZ + (f.z - f.previousZ) * owner.delta;
+                    float yaw = f.previousYaw + net.minecraft.util.math.MathHelper.wrapDegrees(
+                            f.yaw - f.previousYaw) * owner.delta;
+                    matrizen.translate(x - state.x, y - state.y, z - state.z);
+                    matrizen.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(koerperDrehung - yaw));
                 }
             }
+        } else {
+            matrizen.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-koerperDrehung));
+            switch (c.miniMePos) {
+                case 0 -> matrizen.translate(0f, 1.84f - sitzAbzug, 0f);
+                case 1 -> matrizen.translate(SEITE, 1.35f - sitzAbzug, 0f);
+                default -> matrizen.translate(-SEITE, 1.35f - sitzAbzug, 0f);
+            }
+            matrizen.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(koerperDrehung));
         }
-        matrizen.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(koerperDrehung));
+        if (c.miniMePos == 3) {
+            matrizen.translate(0f, (fliegt(c) ? (0.06 + Math.sin(((PlayerEntityRenderState) currentState).age * .12) * .04) : MiniAnimation.hop(schritt(), bewegung()) * faktor), 0f);
+        }
         matrizen.scale(faktor, faktor, faktor);
     }
     /**
@@ -212,33 +217,24 @@ public final class MiniMe {
      * statt quer durch die Welt zu schweben.
      */
     public static void tick(net.minecraft.client.MinecraftClient client) {
-        VConfig c = VConfig.get();
-        if (client == null || client.player == null || !c.miniMe || c.miniMePos != 3) {
-            folgeBereit = false;
+        if (client.world != world) {
+            world = client.world; FOLLOW.clear(); OWNERS.clear(); Begleiter.reset();
+        }
+        if (client.world == null) return;
+        if (!CosmeticsSync.hasRemoteCompanions() && (!VConfig.get().miniMe || VConfig.get().miniMePos != 3)) {
+            FOLLOW.clear();
             return;
         }
-        var spieler = client.player;
-        double bogen = Math.toRadians(spieler.getBodyYaw());
-        // Blickrichtung ist (-sin, cos) — hinter ihm also genau andersherum
-        double zielX = spieler.getX() + Math.sin(bogen) * ABSTAND;
-        double zielZ = spieler.getZ() - Math.cos(bogen) * ABSTAND;
-        double zielY = spieler.getY();
-
-        if (!folgeBereit
-                || spieler.squaredDistanceTo(folgeX, folgeY, folgeZ) > ZU_WEIT * ZU_WEIT) {
-            folgeX = zielX;
-            folgeY = zielY;
-            folgeZ = zielZ;
-            folgeGier = spieler.getBodyYaw();
-            folgeBereit = true;
-            return;
+        java.util.Set<java.util.UUID> present = PRESENT;
+        present.clear();
+        for (var player : client.world.getPlayers()) {
+            VConfig c = CosmeticsSync.config(player.getUuid());
+            if (c == null || !c.miniMe || c.miniMePos != 3) continue;
+            present.add(player.getUuid());
+            CompanionMotion f = FOLLOW.computeIfAbsent(player.getUuid(), id -> new CompanionMotion());
+            f.tick(new CompanionTerrain(client.world, c.miniMeSize / 100.0),
+                    player.getX(), player.getY(), player.getZ(), player.getBodyYaw(), fliegt(c));
         }
-        folgeX += (zielX - folgeX) * TEMPO;
-        folgeY += (zielY - folgeY) * TEMPO;
-        folgeZ += (zielZ - folgeZ) * TEMPO;
-        // Blickrichtung auf die eigene Laufrichtung drehen, kuerzester Weg
-        float diff = net.minecraft.util.math.MathHelper.wrapDegrees(
-                spieler.getBodyYaw() - folgeGier);
-        folgeGier += diff * (float) TEMPO;
+        FOLLOW.keySet().retainAll(present);
     }
 }

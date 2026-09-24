@@ -72,7 +72,7 @@ public class VisualsFabric implements ClientModInitializer {
             int y = Math.min(unten + 6, h - 28);
             knoepfe.add(ButtonWidget
                     .builder(Text.literal("✦ Visual Client"), b ->
-                            client.setScreen(new dev.visual.fabric.ui.VisualHomeScreen()))
+                            client.setScreen(dev.visual.fabric.ui.VisualHomeScreen.oeffnen()))
                     .dimensions(w / 2 - 102, y, 204, 20)
                     .build());
         });
@@ -80,6 +80,7 @@ public class VisualsFabric implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             handleMenuKey(client);
             FakePlayerManager.tick(client);
+            CosmeticsSync.tick(client);
             MiniMe.tick(client);
             CombatTimer.tick(client);
             ClickTracker.tick(client);
@@ -99,16 +100,20 @@ public class VisualsFabric implements ClientModInitializer {
         int key = KeyBindingHelper.getBoundKeyOf(MENU_KEY).getCode();
         if (key < 0) return; // nicht belegt
         boolean down = Compat.isKeyDown(client, key);
-        boolean pressed = down && !menuKeyDown;
+        boolean queued = false;
+        while (MENU_KEY.wasPressed()) queued = true;
+        boolean pressed = (queued || down) && !menuKeyDown;
         menuKeyDown = down;
         if (!pressed || !VConfig.get().menuKey) return;
-        if (client.currentScreen instanceof dev.visual.fabric.ui.VisualHomeScreen) {
-            client.setScreen(null);
+        if (client.currentScreen instanceof dev.visual.fabric.ui.VisualHomeScreen
+                || (client.currentScreen != null && client.currentScreen.getClass().getName()
+                    .equals("dev.visual.fabric.ui.VModulesScreen"))) {
+            client.currentScreen.close();
         } else if (client.currentScreen == null
                 || client.currentScreen instanceof TitleScreen
                 || client.currentScreen instanceof GameMenuScreen
                 || istUnserTitel(client.currentScreen)) {
-            client.setScreen(new dev.visual.fabric.ui.VisualHomeScreen());
+            client.setScreen(dev.visual.fabric.ui.VisualHomeScreen.oeffnen());
         }
     }
 

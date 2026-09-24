@@ -30,12 +30,15 @@ public class PlayerEntityRendererMixin {
         if (player == MinecraftClient.getInstance().player) {
             var cape = CapeManager.get(MinecraftClient.getInstance());
             if (cape != null) Compat.applyCape(state, cape);
+        } else {
+            var cape = dev.visual.fabric.CosmeticsSync.cape(player.getUuid());
+            if (cape != null) Compat.applyCape(state, cape);
         }
 
         boolean self = player == MinecraftClient.getInstance().player;
         // Der Mini-Me haengt nur am eigenen Spieler; welcher Render-Zustand
         // das ist, laesst sich spaeter beim Zeichnen nicht mehr ablesen.
-        MiniMe.merken(state, self);
+        MiniMe.merken(state, player.getUuid(), tickDelta);
         boolean[] visible = self ? VConfig.get().armorSelf : VConfig.get().armorOthers;
         if (!visible[0]) state.equippedHeadStack = ItemStack.EMPTY;
         if (!visible[1]) state.equippedChestStack = ItemStack.EMPTY;

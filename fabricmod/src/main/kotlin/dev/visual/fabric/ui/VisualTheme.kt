@@ -24,13 +24,13 @@ object VisualTheme {
 
     val dunkel: UITheme = PolyGlassDark.copy(
         previewImage = "visual-dark",
-        name = "Visual Dark",
+        name = "SkyGlass Dark",
         branding = MARKE
     )
 
     val hell: UITheme = PolyGlassLight.copy(
         previewImage = "visual-light",
-        name = "Visual Light",
+        name = "SkyGlass Light",
         branding = MARKE
     )
 

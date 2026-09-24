@@ -12,6 +12,18 @@ import java.io.IOException;
 public class VConfig {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static VConfig instance;
+    private static final java.util.concurrent.ScheduledExecutorService WRITER =
+            java.util.concurrent.Executors.newSingleThreadScheduledExecutor(task -> {
+                Thread thread = new Thread(task, "Sky settings writer");
+                thread.setDaemon(true);
+                return thread;
+            });
+    private static java.util.concurrent.ScheduledFuture<?> pending;
+    private static volatile String latestSnapshot;
+    private static final Object WRITE_LOCK = new Object();
+    static {
+        Runtime.getRuntime().addShutdownHook(new Thread(VConfig::writeLatest, "Sky settings flush"));
+    }
 
     /** Sichtbarkeit eigener Rüstung: Helm, Brust, Hose, Schuhe. */
     public boolean[] armorSelf = {true, true, true, true};
@@ -95,11 +107,15 @@ public class VConfig {
     public boolean potionHud = false;
     /** Mini-Me: verkleinerte Ausgabe des eigenen Spielers als Begleiter. */
     public boolean miniMe = false;
+    public int miniMeArt = 0;        // 0 self, cat, wolf, fox, rabbit, parrot, chicken
     public int miniMePos = 1;        // 0 = Kopf, 1 = linke Schulter, 2 = rechte Schulter
     public int miniMeSize = 35;      // Prozent der normalen Größe
     public boolean miniMeSitzt = true;   // sitzt statt zu stehen
     public int miniMeHut = 0;            // 0 = keiner, sonst Index in MiniMe.HUETE
     public boolean miniMeFluegel = false;
+    public int miniMeFlight = 0;       // 0 automatic, 1 walking, 2 flying
+    public int miniMeScarf = 0;        // 0 none, 1 pink, 2 blue, 3 mint
+    public int miniMeShoes = 0;        // 0 none, 1 pink, 2 blue, 3 bunny slippers
     public String miniMeSkin = "";       // Name einer PNG im Skin-Ordner, leer = eigener Skin
     public int crosshairStyle = 0;   // 0 = Kreuz, 1 = Punkt, 2 = Kreis
     public int crosshairSize = 5;
@@ -125,7 +141,7 @@ public class VConfig {
     public static void load() {
         File f = file();
         if (f.exists()) {
-            try (FileReader r = new FileReader(f)) {
+            try (FileReader r = new FileReader(f, java.nio.charset.StandardCharsets.UTF_8)) {
                 instance = GSON.fromJson(r, VConfig.class);
             } catch (IOException ignored) {
             }
@@ -134,10 +150,28 @@ public class VConfig {
         save();
     }
 
-    public static void save() {
-        try (FileWriter w = new FileWriter(file())) {
-            GSON.toJson(get(), w);
-        } catch (IOException ignored) {
+    public static synchronized void save() {
+        // Snapshot mutable game state here; only disk access runs in the worker.
+        latestSnapshot = GSON.toJson(get());
+        if (pending != null) pending.cancel(false);
+        pending = WRITER.schedule(VConfig::writeLatest, 150, java.util.concurrent.TimeUnit.MILLISECONDS);
+    }
+
+    private static void writeLatest() {
+        synchronized (WRITE_LOCK) {
+            String snapshot = latestSnapshot;
+            if (snapshot == null) return;
+            java.nio.file.Path temporary = null;
+            try {
+                var target = file().toPath();
+                temporary = java.nio.file.Files.createTempFile(target.getParent(), "visual-settings-", ".tmp");
+                java.nio.file.Files.writeString(temporary, snapshot, java.nio.charset.StandardCharsets.UTF_8);
+                CosmeticIO.replace(temporary, target);
+            } catch (IOException error) {
+                System.err.println("[Sky] Settings could not be saved: " + error.getClass().getSimpleName());
+            } finally {
+                if (temporary != null) try { java.nio.file.Files.deleteIfExists(temporary); } catch (IOException ignored) { }
+            }
         }
     }
 }

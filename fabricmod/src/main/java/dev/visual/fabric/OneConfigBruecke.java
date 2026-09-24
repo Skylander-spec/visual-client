@@ -22,9 +22,31 @@ public final class OneConfigBruecke {
 
     public static boolean vorhanden() {
         try {
-            return FabricLoader.getInstance().isModLoaded("oneconfig");
+            return FabricLoader.getInstance().isModLoaded("oneconfig")
+                    || FabricLoader.getInstance().isModLoaded("oneconfigv1");
         } catch (Throwable t) {
             return false;
+        }
+    }
+
+    public static net.minecraft.client.gui.screen.Screen bildschirm() {
+        if (!vorhanden()) return null;
+        try {
+            Compat.prepareMenuSkin();
+            if (seite instanceof VisualOneConfig config) config.vonVConfig();
+            Object screen;
+            try {
+                screen = Class.forName("org.polyfrost.oneconfig.api.ui.v1.OneConfigUI")
+                        .getMethod("createScreen").invoke(null);
+            } catch (ClassNotFoundException | NoSuchMethodException olderOneConfig) {
+                // The launcher's 1.0.x bundle predates the public factory; its original screen is public too.
+                screen = Class.forName("org.polyfrost.oneconfig.internal.ui.compose.impls.OneConfigUIScreen")
+                        .getDeclaredConstructor().newInstance();
+            }
+            return screen instanceof net.minecraft.client.gui.screen.Screen s ? s : null;
+        } catch (ReflectiveOperationException | LinkageError unavailable) {
+            System.err.println("[Sky] Original OneConfig menu unavailable: " + unavailable.getClass().getSimpleName());
+            return null;
         }
     }
 
