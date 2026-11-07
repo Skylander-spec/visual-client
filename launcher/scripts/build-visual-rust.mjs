@@ -20,7 +20,7 @@ if (run('git', ['rev-parse', 'HEAD'], source, true) !== commit) throw new Error(
 const applied = spawnSync('git', ['apply', '--reverse', '--check', patch], { cwd: source, stdio: 'ignore' }).status === 0
 if (!applied) { run('git', ['apply', '--check', patch]); run('git', ['apply', patch]) }
 const cargo = path.join(os.homedir(), '.cargo', 'bin', process.platform === 'win32' ? 'cargo.exe' : 'cargo')
-run(cargo, ['build', '--locked', '--profile', 'fast', '-p', 'horizon-client', '--bin', 'horizon-client', '--features', 'visual-client'])
+run(fs.existsSync(cargo) ? cargo : 'cargo', ['build', '--locked', '--profile', 'fast', '-p', 'horizon-client', '--bin', 'horizon-client', '--features', 'visual-client'])
 const ext = process.platform === 'win32' ? '.exe' : ''
 const dir = path.join(root, 'build', 'rust')
 fs.mkdirSync(dir, { recursive: true })
