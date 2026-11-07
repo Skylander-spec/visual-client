@@ -34,7 +34,11 @@ jobs:
           file build/rust/visual-client | grep 'Mach-O.*arm64'
           build/rust/visual-client --help >/dev/null
           npm run build
-          npx electron-builder --mac dmg --arm64 -c.directories.output=dist-mac -c.mac.identity=- --publish never
+          npx electron-builder --mac dir --arm64 -c.directories.output=dist-mac --publish never
+          app="dist-mac/mac-arm64/Visual Client.app"
+          codesign --force --deep --sign - "$app"
+          ln -s /Applications dist-mac/mac-arm64/Applications
+          hdiutil create -volname 'Visual Client' -srcfolder dist-mac/mac-arm64 -format UDZO dist-mac/Visual-Client-1.9.14-arm64.dmg
       - name: Verify mounted disk image
         run: |
           dmg=dist-mac/Visual-Client-1.9.14-arm64.dmg
