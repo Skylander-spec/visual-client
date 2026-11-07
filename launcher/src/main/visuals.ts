@@ -16,6 +16,7 @@ function repoRoot(): string {
 }
 
 export function installVisuals(profileId: string): { pack: boolean; mod: boolean } {
+  if (getProfile(profileId)?.engine === 'horizon') return { pack: false, mod: false }
   const dir = instanceDir(profileId)
   const result = { pack: false, mod: false }
 

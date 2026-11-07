@@ -155,6 +155,7 @@ export async function installMod(
 ): Promise<InstalledMod> {
   const profile = getProfile(profileId)
   if (!profile) throw new VError('error.profileMissing')
+  if (profile.engine === 'horizon') throw new VError('engine.modsHint')
   const loader = profile.loader ?? 'forge'
   // Resourcepacks/Shader sind loader-unabhängig
   const version = await latestVersion(projectId, profile.mcVersion, kind === 'mod' ? loader : null)
@@ -348,6 +349,7 @@ export function toggleContentFile(
 
 /** .mrpack-Modpack in ein Profil importieren (Modrinth-Format). */
 export async function importMrpack(profileId: string, mrpackPath: string): Promise<number> {
+  if (getProfile(profileId)?.engine === 'horizon') throw new VError('engine.modsHint')
   const profile = getProfile(profileId)
   if (!profile) throw new VError('error.profileMissing')
   const zip = new AdmZip(mrpackPath)

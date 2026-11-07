@@ -1,5 +1,6 @@
 import fs from 'fs'
 import crypto from 'crypto'
+import path from 'path'
 import { PROFILES_FILE, instanceDir } from './paths'
 
 export interface InstalledMod {
@@ -14,7 +15,11 @@ export interface InstalledMod {
 
 export type Loader = 'forge' | 'fabric' | 'neoforge' | 'quilt' | 'vanilla'
 
+// Never copy account/session state or installed runtimes into another profile/export.
+export const HORIZON_PORTABLE_PATHS = ['saves', 'resourcepacks', 'shaderpacks', 'options.txt'] as const
+
 export interface Profile {
+  engine?: 'java' | 'horizon'
   id: string
   name: string
   mcVersion: string
@@ -58,6 +63,9 @@ export function saveProfile(profile: Partial<Profile> & { name: string; mcVersio
   const profiles = readAll()
   let existing = profile.id ? profiles.find((p) => p.id === profile.id) : undefined
   if (existing) {
+    if (profile.engine && profile.engine !== (existing.engine ?? 'java')) {
+      throw new Error('Create a new profile to change its game engine.')
+    }
     Object.assign(existing, profile)
   } else {
     const { id: _ignored, ...rest } = profile
@@ -75,6 +83,12 @@ export function saveProfile(profile: Partial<Profile> & { name: string; mcVersio
       ...rest
     } as Profile
     profiles.push(existing)
+  }
+  if (existing.engine === 'horizon') {
+    if (existing.mcVersion !== '26.3') throw new Error('Horizon currently supports Minecraft 26.3 only.')
+    existing.loader = 'vanilla'
+    existing.autoVisuals = false
+    existing.mods = []
   }
   writeAll(profiles)
   instanceDir(existing.id)
@@ -95,7 +109,15 @@ export function duplicateProfile(id: string): Profile | null {
     name: src.name + ' (Kopie)',
     lastPlayed: undefined
   } as never)
-  fs.cpSync(instanceDir(id), instanceDir(copy.id), { recursive: true })
+  if (src.engine === 'horizon') {
+    const from = path.join(instanceDir(id), 'horizon')
+    const to = path.join(instanceDir(copy.id), 'horizon')
+    fs.mkdirSync(to, { recursive: true })
+    for (const name of HORIZON_PORTABLE_PATHS) {
+      const source = path.join(from, name)
+      if (fs.existsSync(source)) fs.cpSync(source, path.join(to, name), { recursive: true })
+    }
+  } else fs.cpSync(instanceDir(id), instanceDir(copy.id), { recursive: true })
   return copy
 }
 

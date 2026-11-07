@@ -1,6 +1,9 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
 const api = {
+  clientPreferences: { get: () => ipcRenderer.invoke('client-preferences:get'), save: (input: unknown) => ipcRenderer.invoke('client-preferences:save', input) },
+  panorama: () => ipcRenderer.invoke('panorama:faces'),
+  horizon: { setup: (id: string) => ipcRenderer.invoke('horizon:setup', id) },
   win: {
     minimize: () => ipcRenderer.send('win:minimize'),
     maximize: () => ipcRenderer.send('win:maximize'),
@@ -20,6 +23,7 @@ const api = {
     remove: (id: string) => ipcRenderer.invoke('profiles:delete', id),
     duplicate: (id: string) => ipcRenderer.invoke('profiles:duplicate', id),
     openFolder: (id: string) => ipcRenderer.invoke('profiles:openFolder', id),
+    openMods: (id: string) => ipcRenderer.invoke('profiles:openMods', id),
     exportZip: (id: string) => ipcRenderer.invoke('profiles:export', id),
     mcVersions: () => ipcRenderer.invoke('mc:versions'),
     systemRamMb: () => ipcRenderer.invoke('sys:ramMb')
@@ -96,6 +100,10 @@ const api = {
   update: {
     state: () => ipcRenderer.invoke('update:state'),
     apply: () => ipcRenderer.invoke('update:apply'),
+    onQuit: (erlauben: boolean) => ipcRenderer.invoke('update:onQuit', erlauben),
+    check: () => ipcRenderer.invoke('update:check'),
+    versions: () => ipcRenderer.invoke('update:versions'),
+    pick: (version: string) => ipcRenderer.invoke('update:pick', version),
     onAvailable: (cb: (info: { version: string }) => void) => {
       const listener = (_e: unknown, info: { version: string }) => cb(info)
       ipcRenderer.on('update:available', listener)

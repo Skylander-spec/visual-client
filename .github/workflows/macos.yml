@@ -1,0 +1,54 @@
+name: Build Visual Client for Apple Silicon
+on:
+  push:
+    branches: [codex/macos-1.9.14]
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: macos-15
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: launcher
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: launcher/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run build:rust
+        env:
+          CARGO_BUILD_JOBS: 2
+      - name: Verify native game and package launcher
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: |
+          test "$(uname -m)" = arm64
+          file build/rust/visual-client | grep 'Mach-O.*arm64'
+          build/rust/visual-client --help >/dev/null
+          npm run build
+          npx electron-builder --mac dmg --arm64 -c.directories.output=dist-mac -c.mac.identity=- --publish never
+      - name: Verify mounted disk image
+        run: |
+          dmg=dist-mac/Visual-Client-1.9.14-arm64.dmg
+          hdiutil verify "$dmg"
+          mount="$RUNNER_TEMP/visual-dmg"
+          mkdir -p "$mount"
+          hdiutil attach "$dmg" -readonly -nobrowse -mountpoint "$mount"
+          trap 'hdiutil detach "$mount"' EXIT
+          app="$mount/Visual Client.app"
+          codesign --verify --deep --strict "$app"
+          file "$app/Contents/MacOS/Visual Client" | grep 'Mach-O.*arm64'
+          npx asar list "$app/Contents/Resources/app.asar" > "$RUNNER_TEMP/asar-files"
+          grep -Fx '/build/rust/visual-client' "$RUNNER_TEMP/asar-files"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Visual-Client-macOS-arm64
+          path: launcher/dist-mac/Visual-Client-1.9.14-arm64.dmg
+          if-no-files-found: error

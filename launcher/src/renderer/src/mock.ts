@@ -1,3 +1,4 @@
+import { clientDefaults } from '../../shared/client-preferences'
 import type { Profile } from './env'
 
 /**
@@ -23,6 +24,9 @@ export function installMockApi(): void {
   }
 
   window.visual = {
+    clientPreferences: { get: async () => ({ ...clientDefaults, ...JSON.parse(localStorage.getItem('mock-client-preferences') || '{}') }), save: async (input) => { localStorage.setItem('mock-client-preferences', JSON.stringify(input)); return input } },
+    panorama: async () => { try { const r = await fetch('/__preview/panorama.json'); return r.ok ? await r.json() : null } catch { return null } },
+    horizon: { setup: async () => { throw new Error('Horizon requires the desktop launcher.') } },
     win: { minimize() {}, maximize() {}, close() {} },
     auth: {
       get: async () => {
@@ -88,6 +92,7 @@ export function installMockApi(): void {
         return copy
       },
       openFolder: async () => {},
+      openMods: async () => {},
       exportZip: async () => false,
       systemRamMb: async () => 16384,
       mcVersions: async () => {
@@ -166,6 +171,10 @@ export function installMockApi(): void {
     update: {
       state: async () => ({ available: false, version: null, current: '1.4.0-dev' }),
       apply: async () => {},
+      onQuit: async () => {},
+      check: async () => ({ available: false, version: null, current: '1.4.0-dev' }),
+      versions: async () => [],
+      pick: async () => ({ ok: false }),
       onAvailable: () => () => {}
     },
     capes: {

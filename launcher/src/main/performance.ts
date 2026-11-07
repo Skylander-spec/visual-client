@@ -231,6 +231,7 @@ export interface PerfResult {
 export async function applyPerformance(profileId: string): Promise<PerfResult> {
   const profile = getProfile(profileId)
   if (!profile) throw new VError('error.profileMissing')
+  if (profile.engine === 'horizon') throw new VError('engine.modsHint')
   const dir = instanceDir(profileId)
   const loader = profile.loader ?? 'forge'
   const legacy = isLegacy(profile.mcVersion)

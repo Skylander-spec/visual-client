@@ -65,7 +65,7 @@ export default function Mods({
   }, [request?.n]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const reloadInstalled = useCallback(async () => {
-    if (!active) return
+    if (!active || active.engine === 'horizon') return
     setInstalled(await window.visual.mods.installed(active.id))
   }, [active?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -75,7 +75,7 @@ export default function Mods({
 
   const search = useCallback(
     async (q: string, off = 0) => {
-      if (!active) return
+      if (!active || active.engine === 'horizon') return
       setBusy('search')
       setMsg('')
       try {
@@ -114,6 +114,13 @@ export default function Mods({
   }
 
   const modsAllowed = loaderInfo(active.loader).mods
+  if (active.engine === 'horizon') return <section className="engine-picker">
+    <span className="engine-eyebrow">RUST · BETA</span><h1>{t('engine.modsTitle')}</h1>
+    <p className="sub">{t('engine.modsHint')}</p>
+    <select value={active.id} onChange={e => onSelect(e.target.value)}>{profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
+    <p><button className="btn primary" onClick={async () => { try { await window.visual.horizon.setup(active.id) } catch (err) { setMsg(errorText(err, t)) } }}>{t('engine.setup')}</button></p>
+    {msg && <p role="status">{msg}</p>}
+  </section>
   const installedIds = new Set(active.mods.map((m) => m.projectId))
 
   async function install(projectId: string): Promise<void> {

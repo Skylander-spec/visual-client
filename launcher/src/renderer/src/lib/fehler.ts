@@ -15,7 +15,7 @@ export function errorText(
   t: (key: string, vars?: Record<string, string | number>) => string
 ): string {
   const raw = e instanceof Error ? e.message : String(e)
-  const m = raw.match(/(error\.[A-Za-z]+)(?:\s+(\{.*\}))?/)
+  const m = raw.match(/((?:error|engine)\.[A-Za-z]+)(?:\s+(\{.*\}))?/)
   if (m) {
     let vars: Record<string, string | number> | undefined
     if (m[2]) {

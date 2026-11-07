@@ -5,6 +5,7 @@ import { installMockApi } from './mock'
 import { bootAccent } from './components/SettingsModal'
 import './theme.css'
 import './epic.css'
+import './profile-design.css'
 
 installMockApi()
 bootAccent()

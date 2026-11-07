@@ -1,0 +1,126 @@
+.modal-back { background: rgba(3, 7, 14, .84); }
+.modal { border-radius: 20px; border: 1px solid rgba(144, 181, 207, .25); background: linear-gradient(155deg, #14202b, #0a111b 65%); box-shadow: 0 28px 100px #0009; animation: profile-enter .22s ease-out; }
+.modal-head { background: transparent; padding: 22px 26px; font-family: inherit; font-size: 16px; letter-spacing: .02em; text-transform: none; }
+.modal-body { padding: 20px 26px; }
+.modal-foot { background: #ffffff03; padding: 18px 26px; border-radius: 0 0 20px 20px; flex-wrap: wrap; }
+.modal-x { background: #ffffff09; border: 1px solid #ffffff16; color: #dce9f2; border-radius: 10px; width: 34px; height: 34px; }
+.modal .btn, .modal input, .modal select { border-radius: 10px; }
+.modal :focus-visible, .engine-option:focus-visible { outline: 2px solid #86dddf; outline-offset: 3px; }
+.engine-picker { padding: 20px 6px; }
+.engine-picker h2 { font-size: 30px; margin: 12px 0; letter-spacing: -.035em; }
+.engine-eyebrow { color: #91c8d6; font-size: 11px; font-weight: 700; letter-spacing: .18em; }
+.engine-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin: 28px 0 12px; }
+.engine-option { text-align: left; display: flex; flex-direction: column; gap: 18px; min-height: 245px; padding: 25px; border: 1px solid #7596ae40; border-radius: 18px; color: #eef7ff; background: radial-gradient(ellipse at 0 0, #2fae9c28, transparent 80%), #101c26; cursor: pointer; transition: transform .18s, border-color .18s, background .18s; }
+.engine-option.horizon { background: radial-gradient(ellipse at 0 0, #aa79e338, transparent 80%), #181a2b; }
+.engine-option:hover { transform: translateY(-4px); border-color: #8ecee0; }
+.engine-symbol { color: #99e7dc; font-size: 34px; }
+.horizon .engine-symbol { color: #c3a1fa; }
+.engine-option strong { font-size: 25px; letter-spacing: -.03em; }
+.engine-option > span:not(.engine-symbol) { color: #aebdcd; font-size: 14px; line-height: 1.6; }
+.engine-option b { margin-top: auto; color: #bddde8; font-size: 13px; }
+.engine-banner { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 20px 24px; border-radius: 15px; background: linear-gradient(110deg, #327e7938, #152231); border: 1px solid #9cd3db20; margin-bottom: 24px; }
+.engine-banner.horizon { background: linear-gradient(110deg, #7653a43d, #152231); }
+.engine-banner h2 { margin: 8px 0; font-size: 23px; }
+.pset { grid-template-columns: 180px minmax(0, 1fr); min-height: 300px; gap: 24px; }
+.pset-nav { border: 0; gap: 8px; }
+.pset-tab { border-radius: 10px; padding: 13px; transition: background .15s, color .15s; font-family: inherit; }
+.pset-tab.active { background: #8fced51c; box-shadow: inset 3px 0 #8dd5db; }
+.pset-body { min-width: 0; }
+.pset .vtile { border-radius: 10px; transition: background .15s, border-color .15s; }
+.engine-note { padding: 20px; margin-top: 18px; border: 1px solid #b6a3e52b; border-radius: 14px; background: #a793e00a; color: #bacbd9; line-height: 1.7; }
+.engine-note h3 { color: #e1dcf2; margin: 0; }
+.lb-horizon { background: #8c6ac92b; color: #c6b2ef; }
+@keyframes profile-enter { from { opacity: 0; transform: translateY(9px) scale(.985); } to { opacity: 1; transform: none; } }
+@media (max-width: 650px) { .engine-options { grid-template-columns: 1fr; } .pset { grid-template-columns: 1fr; } .pset-nav { flex-direction: row; flex-wrap: wrap; } }
+@media (prefers-reduced-motion: reduce) { .modal { animation: none; } .engine-option, .pset-tab, .pset .vtile { transition: none; } .engine-option:hover { transform: none; } }
+/* Landscapes and quiet controls: the artwork carries the profile identity. */
+.engine-option { position: relative; overflow: hidden; min-height: 310px; border: 0; border-radius: 22px; isolation: isolate; padding: 26px; box-shadow: none; background: #14202b; }
+.engine-option.horizon { background: #14202b; }
+.engine-option::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, #09111b08, #09111b70 32%, #09111bf5 83%); z-index: -1; }
+.engine-landscape { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2; transition: transform .5s ease; }
+.engine-option:hover .engine-landscape { transform: scale(1.045); }
+.engine-option:hover { transform: translateY(-2px); }
+.engine-symbol-image { width: 52px; height: 52px; border-radius: 15px; object-fit: cover; box-shadow: 0 5px 18px #0004; margin-bottom: 18px; }
+.engine-option strong { font-size: 28px; }
+.engine-option > span:not(.engine-symbol) { color: #d2dce6; }
+.engine-option b { color: #fff; }
+.engine-banner, .engine-banner.horizon { min-height: 145px; background-size: cover; background-position: center 45%; border: 0; border-radius: 18px; margin-bottom: 22px; }
+.engine-banner .engine-eyebrow, .engine-banner .muted { color: #ebf2f8; text-shadow: 0 1px 4px #000; }
+.engine-banner h2 { font-size: 29px; color: #fff; text-shadow: 0 1px 8px #0008; }
+.engine-banner .btn { background: #101a25c9; border-color: #ffffff36; }
+.rust-profile-body { padding: 0 8px 12px; }
+.rust-profile-heading { display: flex; gap: 14px; align-items: center; margin-bottom: 24px; }
+.rust-profile-heading img { width: 48px; height: 48px; border-radius: 14px; }
+.rust-profile-heading h3 { margin: 0 0 4px; font-size: 20px; }
+.rust-profile-heading .badge { font-size: 10px; margin-left: 8px; vertical-align: middle; }
+.rust-profile-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.rust-profile-fields input { background: #ffffff05; border: 0; border-bottom: 1px solid #ffffff24; padding: 13px 4px; border-radius: 0; }
+.rust-profile-detail { display: flex; justify-content: space-between; padding: 20px 0; border-bottom: 1px solid #ffffff12; color: #aebdcd; }
+.rust-profile-detail strong { color: #e9f2f8; }
+.rust-help { line-height: 1.7; max-width: 76ch; font-size: 13px; margin: 18px 0; }
+.profile-picture { width: 64px; height: 64px; object-fit: cover; border-radius: 18px; flex-shrink: 0; box-shadow: 0 4px 16px #0002; }
+.profile-picture.rust { padding: 0; }
+.prow.card { border-radius: 20px; border-color: transparent; background: #ffffff04; padding: 18px; box-shadow: none; }
+.prow.card:hover { background: #ffffff09; }
+.visual-play.play-grid { display: block; }
+.landscape-stage.stage { background: linear-gradient(180deg, #08111c18 0%, #08111c42 55%, #08111ce8 100%), url('./assets/horizon-sunset.webp') center/cover; border: 0; border-radius: 24px; min-height: 560px; box-shadow: none; }
+.landscape-stage.stage::before { display: none; }
+.landscape-stage .pname-float { color: #fff; text-shadow: 0 2px 12px #0009; }
+.landscape-stage .status-line { color: #f0f4f8; text-shadow: 0 1px 5px #000; }
+.landscape-stage .launchbar { position: relative; z-index: 1; }
+@media (max-width: 650px) { .rust-profile-fields { grid-template-columns: 1fr; gap: 10px; } }
+@media (prefers-reduced-motion: reduce) { .engine-landscape { transition: none; } .engine-option:hover .engine-landscape { transform: none; } }
+.profile-picture.rust { object-fit: contain; padding: 9px; background: linear-gradient(135deg, #b94f1720, #ffb56612); }
+.rust-profile-heading img { object-fit: contain; padding: 4px; background: transparent; }
+.engine-option.horizon .engine-symbol-image { object-fit: contain; box-shadow: none; border-radius: 0; width: 72px; }
+/* Slow 360-degree scene behind the controls, paused with the user's motion preference. */
+.landscape-stage.stage { isolation: isolate; overflow: hidden; }
+.panorama-scene { position: absolute; inset: 0; z-index: -2; pointer-events: none; }
+.panorama-scene canvas { display: block; width: 100%; height: 100%; }
+.landscape-stage.stage::after { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(180deg, #08101c24 0%, #08101c08 45%, #08101cc9 100%); }
+.stage .corner { z-index: 2; display: flex; align-items: center; gap: 18px; padding: 6px 10px; border-radius: 30px; background: #07111e66; }
+.panorama-toggle { border: 0; background: transparent; color: #e9f1f9; cursor: pointer; padding: 8px; font-size: 12px; }
+/* Softer buttons, with distinct primary actions and quiet secondary controls. */
+.btn, .modal .btn, button.tabchip { border-radius: 999px; border: 1px solid #ffffff15; background: #ffffff09; color: #cbd8e5; padding: 10px 18px; box-shadow: none; font-family: inherit; font-size: 13px; font-weight: 600; letter-spacing: 0; transition: background .16s ease, transform .16s ease, color .16s ease; }
+.btn:hover:not(:disabled), .modal .btn:hover:not(:disabled) { background: #ffffff17; border-color: #ffffff25; color: #fff; transform: translateY(-1px); box-shadow: none; }
+.btn.primary, .modal .btn.primary { background: #d6ecea; color: #123d3d; border-color: transparent; box-shadow: none; }
+.btn.primary:hover:not(:disabled), .modal .btn.primary:hover:not(:disabled) { background: #f0fffc; color: #123d3d; }
+.btn:active:not(:disabled), .modal .btn:active:not(:disabled) { transform: translateY(0) scale(.97); }
+.btn:disabled, .modal .btn:disabled { opacity: .35; cursor: default; }
+.launchbar { width: min(570px, 94%); gap: 10px; padding: 7px; border-radius: 28px; background: #07111ba8; border: 1px solid #ffffff1c; }
+.launchbar .main { border-radius: 21px; padding: 18px 24px; font-family: inherit; font-size: 18px; letter-spacing: -.02em; text-transform: none; background: #e5f2e8; color: #12382d; border: 0; box-shadow: 0 4px 16px #0002; transition: transform .16s, background .16s; }
+.launchbar .main:hover:not(:disabled) { background: #fff; transform: translateY(-2px); filter: none; box-shadow: 0 8px 24px #0003; }
+.launchbar .main small { margin-top: 5px; color: #416559; font-family: inherit; font-size: 11px; letter-spacing: 0; text-transform: none; }
+.launchbar select { border: 0; border-radius: 19px; background: #ffffff0a; color: #e1eaf1; width: 170px; min-width: 0; padding: 12px; }
+.sidebar .nav { border-radius: 18px; transition: background .18s, color .18s; }
+.sidebar .nav.active { background: #ffffff0c; border-color: transparent; box-shadow: none; }
+@media (prefers-reduced-motion: reduce) { .btn, .modal .btn, .launchbar .main, .sidebar .nav { transition: none; } .btn:hover:not(:disabled), .launchbar .main:hover:not(:disabled) { transform: none; } }
+.client-wardrobe { max-width: 1100px; margin: auto; }
+.wardrobe-controls { padding: 24px 0 32px; border-bottom: 1px solid #ffffff14; margin-bottom: 32px; }
+.wardrobe-controls .field { max-width: 340px; margin: 20px 0; }
+.wardrobe-controls h2 { margin: 20px 0 14px; font-size: 20px; }
+.wardrobe-controls .muted { max-width: 70ch; line-height: 1.7; margin-top: 20px; }
+.landscape-stage.stage { border-radius: 16px; }
+.launchbar .main { border-radius: 14px; font-size: 19px; padding: 18px 28px; }
+.launchbar { border-radius: 20px; }
+.wardrobe-hero { background-position: center 48%; background-size: cover; padding: 38px; border-radius: 18px; margin-bottom: 24px; }
+.wardrobe-hero h1 { font-size: clamp(26px,3vw,40px); letter-spacing: -.04em; margin: 14px 0; }
+.wardrobe-hero p { color: #d1dbe4; }
+.wardrobe-layout { display: grid; grid-template-columns: minmax(0,1fr) 250px; gap: 38px; }
+.wardrobe-controls { padding-top: 0; }
+.wardrobe-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 22px; }
+.wardrobe-fields .field { margin: 10px 0; }
+.wardrobe-toggle { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #ffffff0d; cursor: pointer; }
+.wardrobe-toggle input { width: 18px; height: 18px; accent-color: #afd0bd; }
+.companion-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 22px 0; }
+.companion-list button { background: transparent; color: #a9b7c4; border: 1px solid #ffffff14; padding: 10px 13px; border-radius: 9px; cursor: pointer; }
+.companion-list button:hover { border-color: #ffffff50; color: white; }
+.companion-list button.selected { color: #def4e8; border-color: #acd0bd80; background: #acd0bd13; }
+.wardrobe-save { display: flex; align-items: center; gap: 15px; margin-top: 26px; }
+.wardrobe-save span, .wardrobe-compatibility { font-size: 12px; color: #9daeba; line-height: 1.7; }
+.wardrobe-compatibility { border-left: 1px solid #ffffff12; padding-left: 24px; }
+.wardrobe-compatibility h2 { color: #e2e9ee; font-size: 18px; }
+.wardrobe-compatibility div { padding: 16px 0; border-bottom: 1px solid #ffffff12; }
+.wardrobe-compatibility strong, .wardrobe-compatibility small { display: block; }
+.wardrobe-compatibility strong { color: #e2e9ee; font-size: 14px; }
+@media(max-width:900px) { .wardrobe-layout { grid-template-columns: 1fr; } .wardrobe-compatibility { border-left: 0; padding-left: 0; } }

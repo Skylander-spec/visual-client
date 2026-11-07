@@ -12,7 +12,7 @@ const Home = lazy(() => import('./pages/Home'))
 const Profiles = lazy(() => import('./pages/Profiles'))
 const Mods = lazy(() => import('./pages/Mods'))
 const Skins = lazy(() => import('./pages/Skins'))
-const Capes = lazy(() => import('./pages/Capes'))
+const Capes = lazy(() => import('./pages/ClientCosmetics'))
 const SettingsModal = lazy(() => import('./components/SettingsModal'))
 
 export default function App(): JSX.Element {
@@ -196,6 +196,15 @@ export default function App(): JSX.Element {
             </span>
             <div className="grow" />
             <button className="btn" onClick={() => setUpdate(null)}>
+              {translate(lang, 'update.later')}
+            </button>
+            <button
+              className="btn"
+              onClick={() => {
+                window.visual.update.onQuit(true)
+                setUpdate(null)
+              }}
+            >
               {translate(lang, 'update.onClose')}
             </button>
             <button className="btn primary" onClick={() => window.visual.update.apply()}>

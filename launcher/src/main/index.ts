@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
+import fs from 'fs'
 import path from 'path'
 import { ensureDirs } from './paths'
 import * as profiles from './profiles'
@@ -6,12 +7,15 @@ import * as modrinth from './modrinth'
 import * as auth from './auth'
 import * as modcheck from './modcheck'
 import * as launch from './launch'
+import { setupHorizon } from './horizon'
+import { panoramaFaces } from './panorama'
+import { clientPreferences, saveClientPreferences } from './client-preferences'
 import * as cosmetics from './cosmetics'
 import { installVisuals } from './visuals'
 import { installPaket } from './paket'
 import { applyPerformance } from './performance'
 import { getSettings, saveSettings } from './settings'
-import { checkForUpdate, checkGithub, updateState, applyUpdate, hasPending } from './updater'
+import { checkForUpdate, checkGithub, updateState, applyUpdate, hasPending, beimBeenden, listeVersionen, holeVersion } from './updater'
 import { toPayload } from './errors'
 import {
   initDiscord,
@@ -152,12 +156,30 @@ function registerIpc(): void {
 
   // Profile
   ipcMain.handle('profiles:list', () => profiles.listProfiles())
+  ipcMain.handle('panorama:faces', () => panoramaFaces())
+  ipcMain.handle('client-preferences:get', () => clientPreferences())
+  ipcMain.handle('client-preferences:save', (_e, input) => { if (launch.runningInstances() > 0) throw new Error('Bitte zuerst laufende Spiele schließen.'); return saveClientPreferences(input) })
+  ipcMain.handle('horizon:setup', (_e, id: string) => setupHorizon(id))
   ipcMain.handle('profiles:save', (_e, p) => profiles.saveProfile(p))
   ipcMain.handle('profiles:delete', (_e, id: string) => profiles.deleteProfile(id))
   ipcMain.handle('profiles:duplicate', (_e, id: string) => profiles.duplicateProfile(id))
   ipcMain.handle('profiles:openFolder', (_e, id: string) => {
     const { instanceDir } = require('./paths') as typeof import('./paths')
     return shell.openPath(instanceDir(id))
+  })
+  /**
+   * Den mods-Ordner eines Profils oeffnen, damit man von Hand etwas
+   * hineinlegen kann.
+   *
+   * Angelegt wird er notfalls: bei einem frisch erstellten Profil, das
+   * noch nie gestartet wurde, gibt es ihn nicht, und shell.openPath
+   * wuerde wortlos nichts tun.
+   */
+  ipcMain.handle('profiles:openMods', (_e, id: string) => {
+    const { instanceDir } = require('./paths') as typeof import('./paths')
+    const ordner = path.join(instanceDir(id), 'mods')
+    fs.mkdirSync(ordner, { recursive: true })
+    return shell.openPath(ordner)
   })
   ipcMain.handle('profiles:export', async (_e, id: string) => {
     const profile = profiles.getProfile(id)
@@ -171,7 +193,14 @@ function registerIpc(): void {
     const AdmZip = (require('adm-zip') as typeof import('adm-zip'))
     const { instanceDir } = require('./paths') as typeof import('./paths')
     const zip = new AdmZip()
-    zip.addLocalFolder(instanceDir(id))
+    if (profile.engine === 'horizon') {
+      for (const name of profiles.HORIZON_PORTABLE_PATHS) {
+        const source = path.join(instanceDir(id), 'horizon', name)
+        if (!fs.existsSync(source)) continue
+        if (fs.statSync(source).isDirectory()) zip.addLocalFolder(source, `horizon/${name}`)
+        else zip.addLocalFile(source, 'horizon')
+      }
+    } else zip.addLocalFolder(instanceDir(id))
     zip.writeZip(res.filePath)
     return true
   })
@@ -183,6 +212,14 @@ function registerIpc(): void {
   ipcMain.handle('update:apply', () => {
     applyUpdate(true)
     setTimeout(() => app.quit(), 300)
+  })
+  ipcMain.handle('update:onQuit', (_e, erlauben: boolean) => beimBeenden(erlauben))
+  ipcMain.handle('update:versions', () => listeVersionen())
+  ipcMain.handle('update:pick', async (_e, version: string) => holeVersion(version))
+  ipcMain.handle('update:check', async () => {
+    checkForUpdate()
+    await checkGithub()
+    return updateState()
   })
 
   // App-Einstellungen (Discord Rich Presence)

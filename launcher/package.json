@@ -1,6 +1,6 @@
 {
   "name": "visual-client",
-  "version": "1.6.2",
+  "version": "1.9.14",
   "description": "Visual Client - Minecraft PvP launcher (Forge, Modrinth, Profile)",
   "main": "out/main/index.js",
   "author": "visual",
@@ -14,7 +14,8 @@
     "dist": "electron-vite build && electron-builder --win",
     "update": "node scripts/apply-update.mjs",
     "release": "node scripts/publish-release.mjs",
-    "publish": "node scripts/publish-github.mjs"
+    "publish": "node scripts/publish-github.mjs",
+    "build:rust": "node scripts/build-visual-rust.mjs"
   },
   "build": {
     "appId": "dev.visual.client",
@@ -31,7 +32,9 @@
       "package.json",
       "build/icon.png",
       "build/icon.ico",
-      "build/capes/**"
+      "build/capes/**",
+      "!out/renderer/__preview/**",
+      "build/rust/**"
     ],
     "win": {
       "target": [
@@ -85,7 +88,8 @@
     "adm-zip": "^0.5.14",
     "minecraft-launcher-core": "^3.18.2",
     "msmc": "^5.0.5",
-    "skinview3d": "^3.4.2"
+    "skinview3d": "^3.4.2",
+    "three": "0.156.1"
   },
   "devDependencies": {
     "@types/adm-zip": "^0.5.5",

@@ -7,6 +7,7 @@ import { errorText } from '../lib/fehler'
 // three.js/skinview3d ist schwer (~600 KB) — nur laden, wenn der Play-Screen
 // wirklich angezeigt wird, statt beim App-Start.
 const SkinView = lazy(() => import('../components/SkinView'))
+const Panorama = lazy(() => import('../components/Panorama'))
 
 export default function Home({
   profiles,
@@ -79,42 +80,10 @@ export default function Home({
     }
   }
 
-  async function installVisuals(): Promise<void> {
-    if (!active) return
-    const r = await window.visual.visuals.install(active.id)
-    setVisualsMsg(
-      r.pack || r.mod
-        ? `Installiert & aktiviert: ${[r.pack && 'Visual Pack', r.mod && 'VisualsMod'].filter(Boolean).join(' + ')}`
-        : 'Assets fehlen — siehe README (Pipeline/Mod-Build).'
-    )
-  }
-
-  const [perfBusy, setPerfBusy] = useState(false)
-  async function boostFps(): Promise<void> {
-    if (!active || perfBusy) return
-    setPerfBusy(true)
-    setVisualsMsg(t('home.optimizing'))
-    try {
-      const r = await window.visual.performance.apply(active.id)
-      const parts = [
-        'JVM-Flags gesetzt',
-        `${r.options} Grafik-Settings optimiert`,
-        r.modsInstalled.length ? `${r.modsInstalled.length} Performance-Mods installiert` : '',
-        r.heavyDisabled.length ? `${r.heavyDisabled.length} FPS-Fresser deaktiviert` : ''
-      ].filter(Boolean)
-      setVisualsMsg('⚡ ' + parts.join(' · '))
-    } catch (e) {
-      setError(errorText(e, t))
-    } finally {
-      setPerfBusy(false)
-    }
-  }
-
-  // Grosses Mod-Paket. Ueber 140 Eintraege — deshalb Fortschritt je Mod,
-
-
-  const li = loaderInfo(active?.loader)
+  const rust = active?.engine === 'horizon'
+  const li = rust ? { label: 'Rust · Beta' } : loaderInfo(active?.loader)
   const [skinAnim, setSkinAnim] = useState(() => localStorage.getItem('skinAnim') !== '0')
+  const [panoramaAnim, setPanoramaAnim] = useState(() => localStorage.getItem('panoramaAnim') !== '0')
 
   function toggleAnim(): void {
     const next = !skinAnim
@@ -123,9 +92,11 @@ export default function Home({
   }
 
   return (
-    <div className="play-grid">
-      <div className="stage">
+    <div className="play-grid visual-play">
+      <div className="stage landscape-stage">
+        <Suspense fallback={null}><Panorama animated={panoramaAnim} /></Suspense>
         <span className="corner">
+          <button className="panorama-toggle" aria-pressed={panoramaAnim} onClick={() => setPanoramaAnim(value => { localStorage.setItem('panoramaAnim', value ? '0' : '1'); return !value })}>{t('engine.panorama')} {panoramaAnim ? 'Ⅱ' : '▶'}</button>
           <label className="checkline" style={{ margin: 0, cursor: 'pointer' }} onClick={toggleAnim}>
             <span
               className={`switch ${skinAnim ? 'on' : ''}`}
@@ -163,7 +134,7 @@ export default function Home({
                 {active.mods.length} {t('play.mods')}
               </span>
               <span>·</span>
-              <span>{active.ramGb} GB</span>
+              <span>{rust ? 'Rust · Beta' : `${active.ramGb} GB`}</span>
             </>
           ) : (
             <span>{t('play.noProfile')}</span>
@@ -193,7 +164,7 @@ export default function Home({
             >
               {profiles.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name} ({p.mcVersion} · {loaderInfo(p.loader).label})
+                  {p.name} ({p.mcVersion} · {p.engine === 'horizon' ? 'Rust · Beta' : loaderInfo(p.loader).label})
                 </option>
               ))}
             </select>
@@ -205,60 +176,15 @@ export default function Home({
           </div>
         )}
         {error && <div className="error">{error}</div>}
+        {rust && <button className="btn" disabled={launching} onClick={async () => {
+          if (!active) return
+          try { await window.visual.horizon.setup(active.id); setError(''); setVisualsMsg(t('engine.setupOpened')) }
+          catch (err) { setError(errorText(err, t)) }
+        }}>{t('engine.setup')} ↗</button>}
         {visualsMsg && <div className="ok">{visualsMsg}</div>}
       </div>
 
-      <aside className="news">
-        <div className="head">▤ {t('news.title')}</div>
-        <div
-          className="ncard"
-          style={{
-            background:
-              'linear-gradient(160deg, rgba(234,179,8,0.4), rgba(3,10,9,0.9) 70%), radial-gradient(200px 100px at 80% 20%, rgba(250,204,21,0.35), transparent), var(--bg-2)',
-            opacity: perfBusy ? 0.6 : 1
-          }}
-          onClick={boostFps}
-        >
-          <div className="nt">{'⚡ ' + t('home.fpsBoost')}</div>
-          <div className="nd">
-            {perfBusy
-              ? t('home.optimizing')
-              : t('home.fpsBoostDesc')}
-          </div>
-        </div>
-        <div
-          className="ncard"
-          style={{
-            background:
-              'linear-gradient(160deg, rgba(20,184,166,0.35), rgba(3,10,9,0.9) 70%), radial-gradient(200px 100px at 80% 20%, rgba(45,212,191,0.4), transparent), var(--bg-2)'
-          }}
-          onClick={installVisuals}
-        >
-          <div className="nt">✦ {t('news.visualPack')}</div>
-          <div className="nd">{t('news.visualPackDesc')}</div>
-        </div>
-        <div
-          className="ncard"
-          style={{
-            background:
-              'linear-gradient(160deg, rgba(124,58,237,0.35), rgba(3,10,9,0.9) 70%), var(--bg-2)'
-          }}
-          onClick={onGoProfiles}
-        >
-          <div className="nt">▤ {t('nav.profiles')}</div>
-          <div className="nd">{t('news.profilesDesc')}</div>
-        </div>
-        <div
-          className="ncard"
-          style={{
-            background:
-              'linear-gradient(160deg, rgba(234,179,8,0.3), rgba(3,10,9,0.9) 70%), var(--bg-2)'
-          }}
-        >
-          <div className="nt">⚡ {t('news.ingame')}</div>
-          <div className="nd">{t('news.ingameDesc')}</div>
-        </div>
-      </aside>
+
     </div>
   )
 }

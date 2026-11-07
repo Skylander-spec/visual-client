@@ -1,3 +1,6 @@
+import horizonIcon from '../assets/rust-ferris.png'
+import sunset from '../assets/horizon-sunset.webp'
+import village from '../assets/horizon-village.webp'
 import { useEffect, useRef, useState } from 'react'
 import type { Profile } from '../env'
 import { loaderInfo } from '../lib/loaders'
@@ -71,10 +74,10 @@ export default function Profiles({
 
       <div className="list">
         {shown.map((p) => {
-          const li = loaderInfo(p.loader)
+          const li = p.engine === 'horizon' ? { label: 'Rust · Beta', className: 'lb-horizon' } : loaderInfo(p.loader)
           return (
             <div key={p.id} className="card hover row prow" style={{ position: 'relative' }}>
-              <div className={`ptile ${li.className}`}>{li.label.slice(0, 1)}</div>
+              <img className={`profile-picture ${p.engine === 'horizon' ? 'rust' : ''}`} src={p.engine === 'horizon' ? horizonIcon : village} alt={p.engine === 'horizon' ? 'Ferris · Rust' : 'Minecraft'} />
               <div className="grow">
                 <div className="row" style={{ gap: 8 }}>
                   <span className="pname">{p.name}</span>
@@ -135,6 +138,14 @@ export default function Profiles({
                     }}
                   >
                     ▤ Ordner öffnen
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMenuFor(null)
+                      window.visual.profiles.openMods(p.id)
+                    }}
+                  >
+                    ◫ Mods-Ordner öffnen
                   </button>
                   <hr />
                   <button

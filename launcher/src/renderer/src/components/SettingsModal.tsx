@@ -61,6 +61,49 @@ export default function SettingsModal({
     window.visual.settings.get().then((s) => setDiscordEnabled(s.discordEnabled))
   }, [])
 
+  const [upd, setUpd] = useState<{ available: boolean; version: string | null; current: string }>({
+    available: false,
+    version: null,
+    current: ''
+  })
+  const [sucht, setSucht] = useState(false)
+
+  useEffect(() => {
+    window.visual.update.state().then(setUpd)
+  }, [])
+
+  async function suchen(): Promise<void> {
+    setSucht(true)
+    try {
+      setUpd(await window.visual.update.check())
+    } finally {
+      setSucht(false)
+    }
+  }
+
+  const [alte, setAlte] = useState<{ version: string; datum: string; laufend: boolean }[] | null>(
+    null
+  )
+  const [holt, setHolt] = useState<string | null>(null)
+  const [fehler, setFehler] = useState(false)
+
+  async function alteZeigen(): Promise<void> {
+    if (alte) return setAlte(null)
+    setAlte(await window.visual.update.versions())
+  }
+
+  async function alteHolen(version: string): Promise<void> {
+    setHolt(version)
+    setFehler(false)
+    try {
+      const r = await window.visual.update.pick(version)
+      if (r.ok) setUpd(await window.visual.update.state())
+      else setFehler(true)
+    } finally {
+      setHolt(null)
+    }
+  }
+
   async function saveDiscord(patch: { discordEnabled?: boolean }): Promise<void> {
     const s = await window.visual.settings.save(patch)
     setDiscordEnabled(s.discordEnabled)
@@ -144,6 +187,74 @@ export default function SettingsModal({
             ? tr('settings.discordHint')
             : tr('settings.discordOff')}
         </div>
+
+        <div className="pset-h">✨ {tr('update.settings')}</div>
+        <div className="muted" style={{ marginBottom: 10 }}>
+          {tr('update.hint')}
+        </div>
+        <div className="row" style={{ gap: 10, alignItems: 'center', marginBottom: 22 }}>
+          <span className="muted">
+            {tr('update.current')}: <b>v{upd.current}</b>
+          </span>
+          <div className="grow" />
+          {upd.available ? (
+            <>
+              <span className="muted">{translate(lang, 'update.ready', { v: upd.version ?? '' })}</span>
+              <button className="btn primary" onClick={() => window.visual.update.apply()}>
+                {tr('update.install')}
+              </button>
+            </>
+          ) : (
+            <>
+              <span className="muted">{sucht ? '' : tr('update.upToDate')}</span>
+              <button className="btn" disabled={sucht} onClick={suchen}>
+                {sucht ? tr('update.checking') : tr('update.check')}
+              </button>
+            </>
+          )}
+        </div>
+
+        <div className="row" style={{ gap: 10, alignItems: 'center', marginBottom: 8 }}>
+          <span className="muted">{tr('update.older')}</span>
+          <div className="grow" />
+          <button className="btn" onClick={alteZeigen}>
+            {alte ? tr('update.hide') : tr('update.show')}
+          </button>
+        </div>
+        {alte && (
+          <div style={{ marginBottom: 22 }}>
+            <div className="muted" style={{ marginBottom: 8 }}>
+              {tr('update.olderHint')}
+            </div>
+            {fehler && (
+              <div className="muted" style={{ marginBottom: 8 }}>
+                {tr('update.failed')}
+              </div>
+            )}
+            {alte.map((f) => (
+              <div
+                key={f.version}
+                className="row"
+                style={{ gap: 10, alignItems: 'center', padding: '6px 0' }}
+              >
+                <b>v{f.version}</b>
+                <span className="muted">{f.datum}</span>
+                <div className="grow" />
+                {f.laufend ? (
+                  <span className="muted">{tr('update.running')}</span>
+                ) : (
+                  <button
+                    className="btn"
+                    disabled={holt !== null}
+                    onClick={() => alteHolen(f.version)}
+                  >
+                    {holt === f.version ? tr('update.loading') : tr('update.load')}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="pset-h">{tr('settings.storage')}</div>
         <div className="muted" style={{ lineHeight: 1.7 }}>

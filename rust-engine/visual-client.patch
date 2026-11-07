@@ -1,0 +1,562 @@
+diff --git a/crates/horizon-client/Cargo.toml b/crates/horizon-client/Cargo.toml
+index 66ca987..ea2d1a0 100644
+--- a/crates/horizon-client/Cargo.toml
++++ b/crates/horizon-client/Cargo.toml
+@@ -87,6 +87,7 @@ wgpu = { version = "30.0.1", default-features = false, features = ["gles"] }
+ winresource = "0.1"
+ 
+ [features]
++visual-client = []
+ default = ["audio", "controllers"]
+ # Sound output. Without it (and `controllers`) the program links neither libasound nor libudev on
+ # Linux: the server build (`--no-default-features`, released as horizon-engine; docs/server.md).
+diff --git a/crates/horizon-client/src/extras.rs b/crates/horizon-client/src/extras.rs
+index d2f0b4e..b4f4181 100644
+--- a/crates/horizon-client/src/extras.rs
++++ b/crates/horizon-client/src/extras.rs
+@@ -287,6 +287,23 @@ impl Extras {
+ pub fn fov_target(vanilla: f32, zoom: f32) -> f32 {
+     if zoom == 1.0 { vanilla } else { vanilla / zoom }
+ }
++
++/// Multiplicative wheel zoom, bounded even for high-resolution trackpads.
++pub fn visual_scroll_zoom(factor: f32, delta: f32) -> f32 {
++    if !delta.is_finite() { return factor; }
++    (factor * 1.2_f32.powf(delta.clamp(-20.0, 20.0))).clamp(1.0, 32.0)
++}
++
++#[test]
++fn visual_zoom_wheel_bounds_and_reversal() {
++    let near = visual_scroll_zoom(4.0, 1.0);
++    assert!(near > 4.0);
++    assert!((visual_scroll_zoom(near, -1.0) - 4.0).abs() < 0.00001);
++    assert_eq!(visual_scroll_zoom(32.0, 20.0), 32.0);
++    assert_eq!(visual_scroll_zoom(1.0, -20.0), 1.0);
++    assert_eq!(visual_scroll_zoom(4.0, f32::NAN), 4.0);
++    assert_eq!(visual_scroll_zoom(4.0, f32::INFINITY), 4.0);
++}
+ /// Frame times over the last few seconds: frames per second, the minimum
+ /// and the 1% low, recomputed twice a second.
+ pub struct FpsCounter {
+diff --git a/crates/horizon-client/src/game.rs b/crates/horizon-client/src/game.rs
+index 5f45e39..412b97d 100644
+--- a/crates/horizon-client/src/game.rs
++++ b/crates/horizon-client/src/game.rs
+@@ -1493,6 +1493,7 @@ struct Game<'a> {
+     agent_pointer: bool,
+     /// `Options.smoothCamera` (cinematic camera), not persisted.
+     smooth_camera: bool,
++    visual_zoom_factor: f32,
+     /// Sneak, sprint, attack and use as ToggleKeyMappings.
+     toggles: horizon_client::keymapping::ToggleKeys,
+     /// A world screen with the pointer captured was open last frame.
+@@ -12424,7 +12425,7 @@ impl Game<'_> {
+             Some(renderer) => {
+                 horizon_client::graphics::lod_distance_capped(distance, &renderer.info)
+             }
+-            None => distance.min(1024),
++            None => distance.min(horizon_client::graphics::MAX_LOD_DISTANCE),
+         }
+     }
+     /// Only enabled LOD worlds extend the renderer's range, never simulation.
+@@ -12653,8 +12654,8 @@ impl ApplicationHandler for Game<'_> {
+         let size = self.options.window_size.map(f64::from);
+         self.fullscreen = horizon_client::window::FullscreenState::new(fullscreen);
+         let attributes = Window::default_attributes()
+-            .with_title("Horizon")
+-            .with_window_icon(horizon_client::window::icon());
++            .with_title(if cfg!(feature = "visual-client") { "Visual Client | Rust Beta" } else { "Horizon" })
++            .with_window_icon(visual_window_icon());
+         // Wayland names the window by its app id, which the horizon.desktop entry matches.
+         #[cfg(target_os = "linux")]
+         let attributes = winit::platform::wayland::WindowAttributesExtWayland::with_name(
+@@ -12721,6 +12722,23 @@ impl ApplicationHandler for Game<'_> {
+             }
+             return;
+         }
++        // Visual's client-menu shortcut is handled before debug/game mappings.
++        if cfg!(feature = "visual-client")
++            && let WindowEvent::KeyboardInput { event: key, .. } = &event
++            && key.state == ElementState::Pressed && !key.repeat
++            && (key.physical_key == PhysicalKey::Code(KeyCode::ShiftRight)
++                || (key.logical_key == winit::keyboard::Key::Named(winit::keyboard::NamedKey::Shift)
++                    && key.location == winit::keyboard::KeyLocation::Right))
++            && self.title.is_none() && self.world_loader.is_none()
++            && self.pending_entry.is_none() && self.pending_save.is_none()
++            && matches!(self.screen, Screen::Playing | Screen::Paused)
++        {
++            self.last_input = Instant::now();
++            self.open_options_at(false, horizon_client::options_ui::Page::Horizon);
++            self.capture(false);
++            log::info!("Visual client menu opened with right Shift");
++            return;
++        }
+         // KeyboardHandler.keyPress: the debug keys come before the game's.
+         if let WindowEvent::KeyboardInput {
+             event: key_event, ..
+@@ -12893,6 +12911,10 @@ impl ApplicationHandler for Game<'_> {
+                         }) * wheel_sensitivity
+                     };
+                     let d = scaled(raw_y) as f32;
++                    if self.visual_zoom_active() && d.is_finite() {
++                        self.visual_zoom_factor = horizon_client::extras::visual_scroll_zoom(self.visual_zoom_factor, d);
++                        return Ok(());
++                    }
+                     if self.dialog_open() {
+                         self.dialog_scroll(d);
+                     } else if let Some(title) = &mut self.title
+@@ -13823,6 +13845,7 @@ impl<'a> Game<'a> {
+             mouse: MouseLook::default(),
+             agent_pointer: false,
+             smooth_camera: false,
++            visual_zoom_factor: 4.0,
+             toggles: Default::default(),
+             was_playing: false,
+             pause: false,
+@@ -15110,8 +15133,8 @@ impl Loading {
+             .map(f64::from);
+         self.fullscreen = horizon_client::window::FullscreenState::new(fullscreen);
+         let attributes = Window::default_attributes()
+-            .with_title("Horizon")
+-            .with_window_icon(horizon_client::window::icon());
++            .with_title(if cfg!(feature = "visual-client") { "Visual Client | Rust Beta" } else { "Horizon" })
++            .with_window_icon(visual_window_icon());
+         // Wayland names the window by its app id, which the horizon.desktop entry matches.
+         #[cfg(target_os = "linux")]
+         let attributes = winit::platform::wayland::WindowAttributesExtWayland::with_name(
+@@ -15788,3 +15811,18 @@ mod tests {
+         }
+     }
+ }
++
++// Visual fork: an original cyan V icon, independent of upstream branding.
++fn visual_window_icon() -> Option<winit::window::Icon> {
++    if !cfg!(feature = "visual-client") { return horizon_client::window::icon(); }
++    let mut pixels = vec![0u8; 32 * 32 * 4];
++    for y in 0..32usize {
++        for x in 0..32usize {
++            let arm = 6.0 + (y as f32 - 6.0) * 0.45;
++            let mark = (6..26).contains(&y) && ((x as f32 - arm).abs() < 2.0 || (x as f32 - (31.0 - arm)).abs() < 2.0);
++            let color = if mark { [75, 220, 240, 255] } else { [12, 20, 36, 255] };
++            pixels[(y * 32 + x) * 4..(y * 32 + x + 1) * 4].copy_from_slice(&color);
++        }
++    }
++    winit::window::Icon::from_rgba(pixels, 32, 32).ok()
++}
+diff --git a/crates/horizon-client/src/game/extras.rs b/crates/horizon-client/src/game/extras.rs
+index 4d21f52..eace896 100644
+--- a/crates/horizon-client/src/game/extras.rs
++++ b/crates/horizon-client/src/game/extras.rs
+@@ -200,7 +200,15 @@ impl Game<'_> {
+     }
+     /// A mod's zoom in effect (`render.set-zoom`): (factor, smooth, turning
+     /// scale); none is 1.
++    pub(super) fn visual_zoom_active(&self) -> bool {
++        cfg!(feature = "visual-client") && self.screen == super::Screen::Playing
++            && self.title.is_none() && self.focused
++            && self.physical_keys.contains(&winit::keyboard::KeyCode::KeyC)
++    }
+     fn zoom_now(&self) -> (f32, bool, f64) {
++        if self.visual_zoom_active() {
++            return (self.visual_zoom_factor, true, 1.0 / f64::from(self.visual_zoom_factor));
++        }
+         self.mod_zoom().map_or((1.0, true, 1.0), |z| {
+             (z.factor, z.smooth, f64::from(z.turn))
+         })
+diff --git a/crates/horizon-client/src/graphics.rs b/crates/horizon-client/src/graphics.rs
+index f3e4c94..cea6694 100644
+--- a/crates/horizon-client/src/graphics.rs
++++ b/crates/horizon-client/src/graphics.rs
+@@ -214,6 +214,8 @@ pub fn reduced_far_detail_suggested() -> bool {
+ /// Apple's: they share the CPU's memory bandwidth, and past it far terrain
+ /// costs them more frame time than it is worth.
+ pub const INTEGRATED_LOD_DISTANCE: u32 = 128;
++// Visual maximum spans the 60-million-block world width; not infinite detail.
++pub const MAX_LOD_DISTANCE: u32 = if cfg!(feature = "visual-client") { 3_750_000 } else { 1024 };
+ /// Whether `INTEGRATED_LOD_DISTANCE` applies to this adapter. Apple's GPUs
+ /// are integrated too, with memory and bandwidth enough for every distance.
+ pub fn lod_capped(info: &wgpu::AdapterInfo) -> bool {
+@@ -221,7 +223,7 @@ pub fn lod_capped(info: &wgpu::AdapterInfo) -> bool {
+ }
+ /// A LOD distance as far terrain uses it on this adapter.
+ pub fn lod_distance_capped(distance: u32, info: &wgpu::AdapterInfo) -> u32 {
+-    let distance = distance.min(1024);
++    let distance = distance.min(MAX_LOD_DISTANCE);
+     if lod_capped(info) {
+         distance.min(INTEGRATED_LOD_DISTANCE)
+     } else {
+@@ -340,7 +342,7 @@ impl Graphics {
+             let number = |d: u32| value.parse().unwrap_or(d);
+             match key.trim() {
+                 "preset" => g.preset = Preset::parse(value),
+-                "lodDistance" => g.lod_distance = number(g.lod_distance).min(1024),
++                "lodDistance" => g.lod_distance = number(g.lod_distance).min(MAX_LOD_DISTANCE),
+                 "farDetail" => g.far_detail = FarDetail::parse(value),
+                 "caveCulling" => g.cave_culling = flag(g.cave_culling),
+                 "entityCulling" => g.entity_culling = flag(g.entity_culling),
+@@ -550,7 +552,7 @@ mod tests {
+         );
+         let m4 = adapter("Apple M4 Pro", wgpu::DeviceType::IntegratedGpu);
+         let discrete = adapter("NVIDIA GeForce RTX 4070", wgpu::DeviceType::DiscreteGpu);
+-        for (distance, capped) in [(0, 0), (64, 64), (128, 128), (256, 128), (1024, 128)] {
++        for (distance, capped) in [(0, 0), (64, 64), (128, 128), (256, 128), (MAX_LOD_DISTANCE, 128)] {
+             let g = Graphics {
+                 lod_distance: distance,
+                 ..Graphics::default()
+@@ -571,12 +573,12 @@ mod tests {
+     #[test]
+     fn lod_distance_is_opt_in_and_bounded() {
+         assert_eq!(Graphics::default().lod_distance, 0);
+-        for distance in [0, 64, 128, 256, 512, 1024] {
++        for distance in [0, 64, 128, 256, 512, MAX_LOD_DISTANCE] {
+             let g = Graphics::parse(&format!("lodDistance:{distance}\n"));
+             assert_eq!(g.lod_distance, distance);
+             assert_eq!(Graphics::parse(&g.serialize()), g);
+         }
+-        assert_eq!(Graphics::parse("lodDistance:10000\n").lod_distance, 1024);
++        assert_eq!(Graphics::parse("lodDistance:4294967295\n").lod_distance, MAX_LOD_DISTANCE);
+         assert_eq!(Graphics::parse("lodDistance:-1\n").lod_distance, 0);
+         assert_eq!(Graphics::parse("lodDistance:invalid\n").lod_distance, 0);
+     }
+diff --git a/crates/horizon-client/src/graphics_ui.rs b/crates/horizon-client/src/graphics_ui.rs
+index cb097c1..9db7b62 100644
+--- a/crates/horizon-client/src/graphics_ui.rs
++++ b/crates/horizon-client/src/graphics_ui.rs
+@@ -352,6 +352,7 @@ impl H {
+             H::Preset => labelled("Preset", g.preset.label()),
+             H::LodDistance => match g.lod_distance {
+                 0 => labelled("LOD Distance", "Off"),
++                n if cfg!(feature = "visual-client") && n == crate::graphics::MAX_LOD_DISTANCE => labelled("LOD Distance", "Unendlich (Weltgrenze)"),
+                 n => labelled("LOD Distance", format!("{n} chunks")),
+             },
+             H::FarDetail => labelled("Far Detail", g.far_detail.label()),
+@@ -429,7 +430,7 @@ impl H {
+         let g = &mut s.horizon;
+         match self {
+             H::LodDistance => {
+-                g.lod_distance = step(&[0, 64, 128, 256, 512, 1024], g.lod_distance, back)
++                g.lod_distance = step(if cfg!(feature = "visual-client") { &[0, 64, 128, 256, 512, 10_000, 100_000, 1_000_000, crate::graphics::MAX_LOD_DISTANCE] } else { &[0, 64, 128, 256, 512, crate::graphics::MAX_LOD_DISTANCE] }, g.lod_distance, back)
+             }
+             H::FarDetail => {
+                 g.far_detail = step(&[FarDetail::Full, FarDetail::Reduced], g.far_detail, back)
+@@ -713,7 +714,7 @@ impl GraphicsUi {
+                     let live = item.available();
+                     if hover && !live {
+                         tooltip = Some(atlas.font.split(
+-                            &Text::literal("This feature is not yet available in Horizon."),
++                            &Text::literal("This feature is not yet available in Visual."),
+                             170.0,
+                         ));
+                     }
+@@ -1011,14 +1012,15 @@ mod tests {
+                 .unwrap();
+             assert_eq!(items[render + 1], item);
+         }
+-        for distance in [64, 128, 256, 512, 1024, 0] {
++        let distances: &[u32] = if cfg!(feature = "visual-client") { &[64, 128, 256, 512, 10_000, 100_000, 1_000_000, crate::graphics::MAX_LOD_DISTANCE, 0] } else { &[64, 128, 256, 512, crate::graphics::MAX_LOD_DISTANCE, 0] };
++        for &distance in distances {
+             item.cycle(&mut s, false, [854, 480]);
+             assert_eq!(s.horizon.lod_distance, distance);
+             assert_eq!(s.render_distance, near);
+         }
+         item.cycle(&mut s, true, [854, 480]);
+-        assert_eq!(s.horizon.lod_distance, 1024);
+-        assert_eq!(item.label(&s).plain(), "LOD Distance: 1024 chunks");
++        assert_eq!(s.horizon.lod_distance, crate::graphics::MAX_LOD_DISTANCE);
++        assert_eq!(item.label(&s).plain(), if cfg!(feature = "visual-client") { "LOD Distance: Unendlich (Weltgrenze)".to_owned() } else { format!("LOD Distance: {} chunks", crate::graphics::MAX_LOD_DISTANCE) });
+         assert_eq!(
+             Item::Vanilla(Opt::RenderDistance).label(&s).plain(),
+             format!("Full Detail Distance: {near} chunks")
+diff --git a/crates/horizon-client/src/lod.rs b/crates/horizon-client/src/lod.rs
+index 1ee61cd..dabce29 100644
+--- a/crates/horizon-client/src/lod.rs
++++ b/crates/horizon-client/src/lod.rs
+@@ -29,8 +29,8 @@ const SAMPLE_JOBS: usize = 4;
+ /// terrain starts one sample job at most this often and no detail: it would
+ /// otherwise take the cores the near chunks and the frame need.
+ const HELD_SAMPLE_STEP: std::time::Duration = std::time::Duration::from_millis(500);
+-/// The coarsest tile level: `Plan` roots cover at most 1024 chunks around.
+-const MAX_LEVEL: u8 = 10;
++/// Coarsest root tile: level 14 covers the Visual 10,000-chunk range.
++const MAX_LEVEL: u8 = if cfg!(feature = "visual-client") { 22 } else { 10 };
+ /// Top solid face and optional fluid face, in absolute block coordinates.
+ #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+ pub struct Surface {
+@@ -338,7 +338,7 @@ impl Plan {
+         elevation: i32,
+         reduced: bool,
+     ) -> Self {
+-        let range = distance.min(1024) as i32 * 16;
++        let range = distance.min(crate::graphics::MAX_LOD_DISTANCE) as i32 * 16;
+         let mut level = 0;
+         while (16 << level) < range {
+             level += 1;
+@@ -536,6 +536,7 @@ pub struct Lod {
+     reduced_detail: bool,
+     pending: FxHashSet<TileKey>,
+     sample_nearby: bool,
++    samples_complete: bool,
+     detail_masks: FxHashMap<TileKey, [u64; 4]>,
+     detail_request_pending: bool,
+     detail_request_at: std::time::Instant,
+@@ -734,6 +735,7 @@ impl Lod {
+             plan: Plan::default(),
+             pending: FxHashSet::default(),
+             sample_nearby: true,
++            samples_complete: false,
+             detail_masks: FxHashMap::default(),
+             detail_request_pending: false,
+             detail_request_at: std::time::Instant::now(),
+@@ -1067,6 +1069,7 @@ impl Lod {
+         if self.area != Some(area) {
+             crate::spans::time("lod_plan", || {
+                 self.area = Some(area);
++                self.samples_complete = false;
+                 self.plan = Plan::with_previous(
+                     camera,
+                     detail,
+@@ -1228,6 +1231,9 @@ impl Lod {
+         detail: i32,
+         elevation: i32,
+     ) {
++        // Once all roots/leaves are ready, camera turns need no new samples.
++        // Replanning resets this, so movement/range/detail changes still load terrain.
++        if self.samples_complete { return; }
+         // Every sample slot busy: no tile can be requested this frame.
+         let free = if self.held() {
+             usize::from(
+@@ -1280,6 +1286,10 @@ impl Lod {
+                 }
+             }
+         }
++        if wanted.is_empty() && fallback.is_empty() && self.pending.is_empty() {
++            self.samples_complete = true;
++            return;
++        }
+         // Only the first `free` keys not already pending are taken. A key is
+         // listed at most twice (as a root and as a node), so the best
+         // `2 * (SAMPLE_JOBS + pending)` entries hold them, in order.
+@@ -1501,9 +1511,14 @@ mod tests {
+     #[test]
+     fn far_plan_is_bounded_and_near_tiles_align_with_chunks() {
+         for camera in [[0, 0], [-1, -17], [1023, -4097]] {
+-            for distance in [64, 256, 1024] {
++            for distance in [64, 256, 1024, 10_000, 1_000_000, crate::graphics::MAX_LOD_DISTANCE] {
+                 let plan = Plan::new(camera, 12, distance);
+-                assert!(plan.nodes.len() < 12000, "{} nodes", plan.nodes.len());
++                // The extended range adds outer LOD rings; it must stay within a fixed planning budget.
++                let budget = if distance > 10_000 { 28000 } else if distance > 1024 { 16000 } else { 12000 };
++                assert!(plan.nodes.len() < budget, "{} nodes", plan.nodes.len());
++                if distance > 1024 {
++                    assert!(plan.nodes.iter().any(|key| key.distance(camera) > 1024 * 16), "extended range must not silently clamp to 1024");
++                }
+                 assert!(plan.roots.iter().all(|key| key.level <= MAX_LEVEL));
+                 for key in &plan.nodes {
+                     if !plan.split.contains(key) && key.distance(camera) < 12 * 16 {
+@@ -1515,7 +1530,7 @@ mod tests {
+                     .iter()
+                     .filter(|k| !plan.split.contains(k))
+                     .count();
+-                assert!(cells < 10000);
++                assert!(cells < if distance > 10_000 { 20000 } else { 10000 });
+             }
+         }
+         assert_eq!(
+diff --git a/crates/horizon-client/src/options_ui.rs b/crates/horizon-client/src/options_ui.rs
+index 5a7acab..ff94de2 100644
+--- a/crates/horizon-client/src/options_ui.rs
++++ b/crates/horizon-client/src/options_ui.rs
+@@ -561,7 +561,7 @@ impl Opt {
+             }),
+             Opt::PadKeyboard => Text::literal(match s.controller.keyboard {
+                 gamepad::TextKeyboard::Auto => "Auto",
+-                gamepad::TextKeyboard::Horizon => "Horizon",
++                gamepad::TextKeyboard::Horizon => "Visual",
+                 gamepad::TextKeyboard::Steam => "Steam",
+             }),
+             _ => Text::empty(),
+@@ -845,7 +845,7 @@ pub enum Page {
+     Extras,
+     /// CreditsAndAttributionScreen.
+     Credits,
+-    /// Horizon Settings: every page Horizon adds, as a mod's settings
++    /// Visual Settings: every page Horizon adds, as a mod's settings
+     /// screen hangs off vanilla's Options.
+     Horizon,
+     /// AI Agent: agent control on or off, whether an agent is connected, the connection details.
+@@ -1063,10 +1063,10 @@ fn option_widget(s: &Settings, opt: Opt, x: f32, y: f32, w: f32) -> Widget {
+ /// What a button opening one of Horizon's pages says on hover.
+ fn horizon_page_tooltip(page: Page) -> Option<&'static str> {
+     Some(match page {
+-        Page::Horizon => "Horizon's own settings: graphics, controllers, extras and mods.",
++        Page::Horizon => "Visual's own settings: graphics, controllers, extras and mods.",
+         Page::Graphics => "Graphics, simply: each setting says what it costs.",
+         Page::GraphicsAdvanced => {
+-            "Every graphics setting, Horizon's included, with what each costs."
++            "Every graphics setting, Visual's included, with what each costs."
+         }
+         Page::Controller => "Controllers: their buttons, sticks, vibration and menu navigation.",
+         Page::Extras => {
+@@ -1074,10 +1074,10 @@ fn horizon_page_tooltip(page: Page) -> Option<&'static str> {
+         }
+         Page::Agent => "Let your own AI agent play: horizon-ctl and MCP clients on this computer.",
+         Page::ShaderPacks => {
+-            "Shader packs from the shaderpacks folder: Horizon's own and those in the shaders/ format. One runs at a time."
++            "Shader packs from the shaderpacks folder: Visual's own and those in the shaders/ format. One runs at a time."
+         }
+         Page::Mods => {
+-            "Mods made for Horizon, from the horizon-mods folder. Each runs in a sandbox and stays off until you turn it on."
++            "Mods made for Visual, from the horizon-mods folder. Each runs in a sandbox and stays off until you turn it on."
+         }
+         _ => return None,
+     })
+@@ -1171,9 +1171,9 @@ impl OptionsUi {
+             Page::Graphics | Page::GraphicsAdvanced => "options.videoTitle",
+             Page::Controller => "Controller Settings",
+             Page::PadBinds => "Controller Binds",
+-            Page::Extras => "Horizon Extras",
++            Page::Extras => "Visual Extras",
+             Page::Credits => "credits_and_attribution.screen.title",
+-            Page::Horizon => "Horizon Settings",
++            Page::Horizon => "Visual Settings",
+             Page::Agent => "AI Agent",
+         }
+     }
+@@ -1330,7 +1330,7 @@ impl OptionsUi {
+                         0.0,
+                         0.0,
+                         150.0,
+-                        Text::literal("Horizon Graphics..."),
++                        Text::literal("Visual Graphics..."),
+                         Act::Push(Page::Graphics),
+                     ),
+                     Some(button(
+@@ -1537,7 +1537,7 @@ impl OptionsUi {
+                     .enumerate()
+                     .map(|(i, pack)| {
+                         let kind = match pack.kind {
+-                            crate::shader_pack_list::Kind::Horizon => " (Horizon)",
++                            crate::shader_pack_list::Kind::Horizon => " (Visual)",
+                             crate::shader_pack_list::Kind::Classic => "",
+                         };
+                         let label = Text::literal(format!("{}{kind}: ", pack.title))
+@@ -1598,7 +1598,7 @@ impl OptionsUi {
+                     // Vanilla's Telemetry Data and Credits slots: Horizon's
+                     // settings and its mods, as a mod adds its button here.
+                     // Credits & Attribution (WinScreen's credits) follows them.
+-                    ("Horizon Settings...", Some(Page::Horizon)),
++                    ("Visual Settings...", Some(Page::Horizon)),
+                     ("Mods...", Some(Page::Mods)),
+                     ("options.credits_and_attribution", Some(Page::Credits)),
+                 ];
+@@ -2183,7 +2183,7 @@ impl OptionsUi {
+                     && !opt.available()
+                 {
+                     tooltip = Some(atlas.font.split(
+-                        &Text::literal("This feature is not yet available in Horizon."),
++                        &Text::literal("This feature is not yet available in Visual."),
+                         170.0,
+                     ));
+                 }
+diff --git a/crates/horizon-client/src/title.rs b/crates/horizon-client/src/title.rs
+index 3cbe1cc..3961944 100644
+--- a/crates/horizon-client/src/title.rs
++++ b/crates/horizon-client/src/title.rs
+@@ -686,6 +686,18 @@ impl Title {
+             icon: None,
+         };
+         match &self.mode {
++            Mode::Main if cfg!(feature = "visual-client") => {
++                let cx = (w / 2.0).floor();
++                let y = (h / 2.0).floor() - 12.0;
++                vec![
++                    b(cx - 100.0, y, 200.0, &lang::get_or("menu.singleplayer", "Singleplayer"), true, 1),
++                    b(cx - 100.0, y + 26.0, 200.0, &lang::get_or("menu.multiplayer", "Multiplayer"), true, 4),
++                    b(cx - 100.0, y + 52.0, 98.0, &lang::get_or("menu.options", "Options..."), true, 3),
++                    b(cx + 2.0, y + 52.0, 98.0, &lang::get_or("gui.friends.open", "Friends"), true, 5),
++                    b(cx - 100.0, y + 78.0, 98.0, &lang::get_or("options.language", "Language..."), true, 6),
++                    b(cx + 2.0, y + 78.0, 98.0, &lang::get_or("menu.quit", "Quit Game"), true, 2),
++                ]
++            }
+             Mode::Main => {
+                 let cx = (w / 2.0).floor();
+                 let y = (h / 4.0).floor() + 48.0;
+@@ -928,6 +940,25 @@ impl Title {
+             return rules.draw(batch, atlas, cursor);
+         }
+         match &self.mode {
++            Mode::Main if cfg!(feature = "visual-client") => {
++                batch.fill(atlas, 0.0, 0.0, w, h, rgba(7, 13, 26, 180));
++                let cx = (w / 2.0).floor();
++                let y = (h / 2.0).floor() - 12.0;
++                batch.fill(atlas, cx - 116.0, y - 76.0, 232.0, 184.0, rgba(13, 21, 38, 210));
++                let pulse = (self.started.elapsed().as_secs_f32() * 0.6).sin() * 0.5 + 0.5;
++                batch.fill(atlas, cx - 36.0, y - 61.0, 72.0, 2.0, rgba(174, 130, 255, (190.0 + pulse * 65.0) as u8));
++                let label = "VISUAL CLIENT";
++                let width = HudBatch::text_width(atlas, label);
++                let start = batch.vertices.len();
++                batch.text(atlas, label, 0.0, 0.0, rgba(235, 241, 255, 255), false);
++                for v in &mut batch.vertices[start..] {
++                    v.pos = [cx - width + v.pos[0] * 2.0, y - 47.0 + v.pos[1] * 2.0];
++                }
++                centered(atlas, batch, "RUST EDITION / BETA", y - 21.0, rgba(167, 190, 216, 255));
++                let version = format!("Visual Client / Minecraft {}", horizon_core::VANILLA_VERSION);
++                batch.text(atlas, &version, 8.0, h - 22.0, rgba(173, 187, 209, 255), false);
++                batch.text(atlas, "Based on Horizon / MIT", 8.0, h - 10.0, rgba(126, 143, 166, 255), false);
++            }
+             Mode::Main => {
+                 // LogoRenderer: the logo's top 44 of 64 rows, then the edition
+                 // banner's top 14 of 16 rows overlapping its bottom by 7.
+@@ -1258,7 +1289,12 @@ impl Title {
+                 "gui/sprites/widget/button"
+             };
+             // Nine-slice approximation: left and right halves of the 200-wide sprite.
+-            if let Some(r) = atlas.sprites.get(sprite).copied() {
++            if cfg!(feature = "visual-client") && matches!(self.mode, Mode::Main) {
++                let fill = if b.id == 1 { rgba(117, 78, 190, 255) }
++                    else if hover { rgba(51, 66, 94, 255) } else { rgba(28, 40, 62, 255) };
++                batch.fill(atlas, b.x, b.y, b.w, 20.0, fill);
++                if hover { batch.fill(atlas, b.x, b.y, 2.0, 20.0, rgba(114, 226, 236, 255)); }
++            } else if let Some(r) = atlas.sprites.get(sprite).copied() {
+                 let half = b.w / 2.0;
+                 let mut left = r;
+                 left.u1 = r.u0 + (r.u1 - r.u0) * (half / r.w as f32);
+@@ -1951,6 +1987,7 @@ mod classic_tests {
+     }
+ 
+     #[test]
++    #[cfg(not(feature = "visual-client"))]
+     fn classic_logo_and_icon_geometry_matches_minecraft() {
+         let root = Path::new("/nonexistent/horizon-test-resources");
+         let mut atlas = HudAtlas::build(root).unwrap();
+diff --git a/crates/horizon-client/src/ui.rs b/crates/horizon-client/src/ui.rs
+index e034f2b..49ce950 100644
+--- a/crates/horizon-client/src/ui.rs
++++ b/crates/horizon-client/src/ui.rs
+@@ -325,7 +325,13 @@ pub fn button(
+     } else {
+         "gui/sprites/widget/button"
+     };
+-    nine_slice(batch, atlas, sprite, x, y, w, h, u32::MAX);
++    if cfg!(feature = "visual-client") {
++        let background = if !active { rgba(22, 25, 35, 220) } else if hover { rgba(65, 48, 100, 245) } else { rgba(32, 35, 51, 240) };
++        batch.fill(atlas, x, y, w, h, background);
++        batch.fill(atlas, x, y + h - 1.0, w, 1.0, if hover && active { rgba(105, 225, 240, 255) } else { rgba(89, 73, 125, 200) });
++    } else {
++        nine_slice(batch, atlas, sprite, x, y, w, h, u32::MAX);
++    }
+     let color = if active {
+         rgba(255, 255, 255, 255)
+     } else {
+@@ -406,6 +412,11 @@ pub fn menu_background(
+     h: f32,
+     in_world: bool,
+ ) {
++    if cfg!(feature = "visual-client") {
++        batch.fill(atlas, x, y, w, h, rgba(12, 16, 28, if in_world { 210 } else { 250 }));
++        batch.fill(atlas, x, y, w, 2.0, rgba(115, 79, 190, 220));
++        return;
++    }
+     let sprite = if in_world {
+         "gui/inworld_menu_background"
+     } else {

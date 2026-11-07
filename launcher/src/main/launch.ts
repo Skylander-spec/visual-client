@@ -10,6 +10,7 @@ import { ensureFabric, ensureQuilt } from './fabric'
 import { ensureNeoForge, neoforgeJvmArgs } from './neoforge'
 import { installVisuals, installBranding } from './visuals'
 import { VError } from './errors'
+import { playHorizon } from './horizon'
 import { entferneKaputteJars } from './repair'
 
 const FORGE_PROMOS = 'https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json'
@@ -366,6 +367,26 @@ export async function launchProfile(
   // Mehrere Instanzen sind erlaubt — kein globaler Block.
   const profile = getProfile(profileId)
   if (!profile) throw new VError('error.profileMissing')
+  if (profile.engine === 'horizon') {
+    let started = false
+    try {
+      await playHorizon(profile.id, key => send(win, 'launch:status', { key, progress: 0 }), () => {
+        started = true
+        runningCount++
+        onInstanceChange?.(runningCount, { version: profile.mcVersion, profile: profile.name })
+      }, lang)
+      send(win, 'launch:status', { key: 'engine.stopped', progress: 100 })
+    } finally {
+      if (started) { runningCount = Math.max(0, runningCount - 1); onInstanceChange?.(runningCount) }
+    }
+    return
+  }
+  // The welcome screen follows the launcher language, including existing profiles.
+  const configDir = path.join(instanceDir(profileId), 'config')
+  fs.mkdirSync(configDir, { recursive: true })
+  fs.writeFileSync(path.join(configDir, 'visual-launcher.json'), JSON.stringify({
+    language: ['de', 'en', 'ru'].includes(lang) ? lang : 'en'
+  }))
   spracheVorbelegen(instanceDir(profileId), lang, profile.mcVersion.startsWith('1.8'))
   const auth = await mclcAuth()
   if (!auth) throw new VError('error.notLoggedIn')
@@ -423,8 +444,40 @@ export async function launchProfile(
       const pct = e.total > 0 ? Math.round((e.task / e.total) * 100) : 0
       send(win, 'launch:status', { key: 'launch.downloading', vars: { type: e.type, pct }, progress: pct })
     })
-    launcher.on('debug', (line: string) => send(win, 'launch:log', line))
-    launcher.on('data', (line: string) => send(win, 'launch:log', line))
+    /**
+     * Die Spielausgabe mitschreiben.
+     *
+     * Bisher ging sie nur an die Oberflaeche und war weg, sobald der
+     * Launcher zu war. Stirbt Minecraft ohne Absturzbericht - und das tut
+     * es bei einem Fehler im Bildschirm-Code - gab es hinterher nichts
+     * zum Nachlesen. Genau das hat eine Fehlersuche blockiert.
+     *
+     * Eine Datei je Profil, beim Start geleert, damit sie nicht endlos
+     * waechst.
+     */
+    const logDatei = path.join(DATA_DIR, 'logs', `${profile.id}.log`)
+    try {
+      fs.mkdirSync(path.dirname(logDatei), { recursive: true })
+      fs.writeFileSync(logDatei, `=== ${new Date().toISOString()} ${profile.name} ===\n`)
+    } catch {
+      // Ohne Mitschrift laeuft das Spiel trotzdem
+    }
+    const mitschreiben = (line: string): void => {
+      try {
+        fs.appendFileSync(logDatei, line.endsWith('\n') ? line : line + '\n')
+      } catch {
+        /* Mitschrift ist Beiwerk */
+      }
+    }
+
+    launcher.on('debug', (line: string) => {
+      mitschreiben(line)
+      send(win, 'launch:log', line)
+    })
+    launcher.on('data', (line: string) => {
+      mitschreiben(line)
+      send(win, 'launch:log', line)
+    })
     let counted = false
     const startInstance = (): void => {
       if (!counted) {

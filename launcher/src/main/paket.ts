@@ -20,10 +20,25 @@ import { VError } from './errors'
  */
 // waveycapes fehlt bewusst: fuer 1.21.11 gibt es auf Modrinth keine
 // Fabric-Fassung. Aufgenommen wird nur, was sich von dort beziehen laesst.
+// fastquit fehlt bewusst: es laesst die Welt im Hintergrund
+// weiterspeichern, waehrend man schon die naechste oeffnet. Mit
+// Xaeros Mods (sehr verbreitet, XaeroLib) gibt das beim Anlegen
+// der zweiten Welt ein 'Multiple servers running at once is not
+// supported!' und Minecraft stirbt. Bequemlichkeit gegen Absturz
+// ist kein guter Tausch.
+// polyplus fehlt bewusst: es beschreibt sich selbst als "Various
+// expansions for the OneClient 'modpack'" und bringt OneClients
+// Titelbildschirm mit - eigene Klasse, nicht die von Minecraft,
+// weshalb unser TitleScreen-Mixin nie feuerte. Im Spiel stand dann
+// ONECLIENT statt VISUAL CLIENT. Die einzelnen poly*-Mods
+// (polyblur, polysprint, polytime ...) bleiben, die sind Funktion
+// ohne Marke.
+// animatium fehlt bewusst: es schreibt denselben Mixin-Punkt um wie
+// viewmodel (HeldItemRenderer.renderFirstPersonItem). Zusammen stuerzt
+// Minecraft beim Start ab; viewmodel gewinnt und bleibt.
 const PAKET: string[] = [
   '3dskinlayers',
   'animaticarefabricated',
-  'animatium',
   'appleskin',
   'architectury-api',
   'autogg-fabric',
@@ -74,7 +89,6 @@ const PAKET: string[] = [
   'evergreenhud',
   'fabric-api',
   'fabric-language-kotlin',
-  'fastquit',
   'fastserverpings',
   'ferrite-core',
   'firmament-packet-fix',
@@ -118,7 +132,6 @@ const PAKET: string[] = [
   'particle-core',
   'polyblur',
   'polynametag',
-  'polyplus',
   'polysprint',
   'polytime',
   'polytone',
@@ -193,6 +206,7 @@ export async function installPaket(
 ): Promise<PaketStand> {
   const profil = getProfile(profileId)
   if (!profil) throw new VError('error.profileMissing')
+  if (profil.engine === 'horizon') throw new VError('engine.modsHint')
 
   // Schon vorhandene ueberspringen, damit ein zweiter Lauf schnell ist
   const da = new Set<string>()

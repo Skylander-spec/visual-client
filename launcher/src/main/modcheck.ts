@@ -57,7 +57,7 @@ function unterstuetzt(mcVersion?: string): boolean {
 export function pruefen(): Fehlend[] {
   const offen: Fehlend[] = []
   for (const p of listProfiles()) {
-    if (!betrifft(p.loader) || !unterstuetzt(p.mcVersion)) continue
+    if (p.engine === 'horizon' || !betrifft(p.loader) || !unterstuetzt(p.mcVersion)) continue
     let dateien: string[] = []
     try {
       dateien = fs.readdirSync(path.join(instanceDir(p.id), 'mods'))

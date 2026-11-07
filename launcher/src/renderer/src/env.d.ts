@@ -35,6 +35,7 @@ export interface CosmeticFile {
 export type Loader = 'forge' | 'fabric' | 'neoforge' | 'quilt' | 'vanilla'
 
 export interface Profile {
+  engine?: 'java' | 'horizon'
   id: string
   name: string
   mcVersion: string
@@ -85,6 +86,9 @@ export interface UpdateInfo {
 declare global {
   interface Window {
     visual: {
+      clientPreferences: { get(): Promise<import('../../shared/client-preferences').ClientPreferences>; save(input: import('../../shared/client-preferences').ClientPreferences): Promise<import('../../shared/client-preferences').ClientPreferences> }
+      panorama(): Promise<string[] | null>
+      horizon: { setup(id: string): Promise<void> }
       win: { minimize(): void; maximize(): void; close(): void }
       auth: {
         get(): Promise<Account | null>
@@ -100,6 +104,7 @@ declare global {
         remove(id: string): Promise<void>
         duplicate(id: string): Promise<Profile | null>
         openFolder(id: string): Promise<void>
+        openMods(id: string): Promise<void>
         exportZip(id: string): Promise<boolean>
         mcVersions(): Promise<string[]>
         systemRamMb(): Promise<number>
@@ -165,6 +170,10 @@ declare global {
       update: {
         state(): Promise<{ available: boolean; version: string | null; current: string }>
         apply(): Promise<void>
+        onQuit(erlauben: boolean): Promise<void>
+        check(): Promise<{ available: boolean; version: string | null; current: string }>
+        versions(): Promise<{ version: string; datum: string; laufend: boolean }[]>
+        pick(version: string): Promise<{ ok: boolean; version?: string }>
         onAvailable(cb: (info: { version: string }) => void): () => void
       }
       capes: {
