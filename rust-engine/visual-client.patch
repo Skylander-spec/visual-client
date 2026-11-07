@@ -268,7 +268,7 @@ index cb097c1..9db7b62 100644
              Item::Vanilla(Opt::RenderDistance).label(&s).plain(),
              format!("Full Detail Distance: {near} chunks")
 diff --git a/crates/horizon-client/src/lod.rs b/crates/horizon-client/src/lod.rs
-index 1ee61cd..c25063b 100644
+index 1ee61cd..d0ce726 100644
 --- a/crates/horizon-client/src/lod.rs
 +++ b/crates/horizon-client/src/lod.rs
 @@ -29,8 +29,11 @@ const SAMPLE_JOBS: usize = 4;
@@ -294,6 +294,15 @@ index 1ee61cd..c25063b 100644
          let mut level = 0;
          while (16 << level) < range {
              level += 1;
+@@ -403,7 +406,7 @@ impl Plan {
+             if complete {
+                 return true;
+             }
+-            if ready.contains_key(&key) {
++            if key.level <= MAX_FALLBACK_LEVEL && ready.contains_key(&key) {
+                 // Its mesh is clipped around every selected finer tile.
+                 out.push(key);
+                 return true;
 @@ -536,6 +539,7 @@ pub struct Lod {
      reduced_detail: bool,
      pending: FxHashSet<TileKey>,
@@ -377,10 +386,15 @@ index 1ee61cd..c25063b 100644
          }
          assert_eq!(
 diff --git a/crates/horizon-client/src/lod/mesh.rs b/crates/horizon-client/src/lod/mesh.rs
-index 852f45e..70f539a 100644
+index 852f45e..f122bdc 100644
 --- a/crates/horizon-client/src/lod/mesh.rs
 +++ b/crates/horizon-client/src/lod/mesh.rs
-@@ -555,7 +555,7 @@ fn mesh_columns_with_edges(
+@@ -552,10 +552,12 @@ fn mesh_columns_with_edges(
+         }
+     }
+     let mut mesh = SectionMesh::default();
++    // Huge tiles reduce texture repetitions to keep the geometry bounded.
++    let texture_scale = (key.size() as f32 / 16_384.0).max(1.0);
      for (key, mut rects) in faces {
          merge(&mut rects);
          for rect in rects {
@@ -389,8 +403,13 @@ index 852f45e..70f539a 100644
          }
      }
      mesh
-@@ -844,17 +844,17 @@ const MAX_FACE: f32 = 1024.0;
- fn emit(mesh: &mut SectionMesh, key: FaceKey, rect: Rect) {
+@@ -841,20 +843,21 @@ fn merge(rects: &mut Vec<Rect>) {
+ /// The widest face `emit` writes, in blocks: its UVs, counted from the face's
+ /// corner, must stay within `TerrainVertex::tiled`'s range.
+ const MAX_FACE: f32 = 1024.0;
+-fn emit(mesh: &mut SectionMesh, key: FaceKey, rect: Rect) {
++fn emit(mesh: &mut SectionMesh, key: FaceKey, rect: Rect, texture_scale: f32) {
++    let max_face = MAX_FACE * texture_scale;
      let mut u0 = rect.u0;
      while u0 < rect.u1 {
 -        let u1 = rect.u1.min(u0 + MAX_FACE);
@@ -411,7 +430,16 @@ index 852f45e..70f539a 100644
      let Rect { u0, v0, u1, v1 } = rect;
      let p = f32::from_bits(key.plane);
      let mut points = match key.direction {
-@@ -972,6 +972,7 @@ mod tests {
+@@ -881,7 +884,7 @@ fn emit_quad(mesh: &mut SectionMesh, key: FaceKey, rect: Rect) {
+         Direction::Up | Direction::Down => [pos[0], -pos[2]],
+         Direction::North | Direction::South => [pos[0], -pos[1]],
+         Direction::West | Direction::East => [pos[2], -pos[1]],
+-    });
++    }.map(|uv| uv / texture_scale));
+     let corner = [0, 1].map(|i| {
+         uvs.iter()
+             .map(|uv| uv[i])
+@@ -972,6 +975,7 @@ mod tests {
                  u1: 2500.0,
                  v1: 16.0,
              },
